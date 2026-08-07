@@ -1,0 +1,363 @@
+let popupDismissed = false;
+let currentState = null;
+
+window.reRenderUI = () => { if (currentState) updateUI(currentState); };
+
+const formatDisplay = (val, size = 'small', hideInr = false) => {
+    const multiplier = parseInt(document.getElementById('unit_multiplier').value) || 100;
+    const isNegative = val < 0;
+    const absVal = Math.abs(val);
+    const inrVal = absVal * multiplier;
+    const sign = isNegative ? '-' : '';
+    const displayUnit = Number.isInteger(absVal) ? absVal : absVal.toFixed(2);
+    const unitPart = `${sign}${displayUnit} U`;
+    
+    if (hideInr) return unitPart;
+    
+    let inrSizeClass = 'text-xs text-slate-500';
+    if (size === 'large') { inrSizeClass = 'text-lg text-slate-400 font-medium'; }
+    else if (size === 'medium') { inrSizeClass = 'text-base text-slate-400 font-medium'; }
+    
+    const inrDisplay = inrVal.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    const inrPart = `<span class="${inrSizeClass} ml-2"> (₹${inrDisplay})</span>`;
+    return `${unitPart}${inrPart}`;
+};
+
+const renderRiskRadar = (lossSequence) => {
+    const container = document.getElementById('risk_radar_container');
+    const stepsCount = document.getElementById('risk_steps_count');
+    if (!container || !stepsCount) return;
+
+    if (!lossSequence || lossSequence.length === 0) {
+        stepsCount.innerText = '0 Spins';
+        container.innerHTML = `<div class="text-[10px] text-slate-600 font-medium">Bankroll is safe.</div>`;
+        return;
+    }
+    
+    stepsCount.innerText = `${lossSequence.length} Spin${lossSequence.length > 1 ? 's' : ''}`;
+    let riskHtml = '';
+    
+    lossSequence.forEach((step, idx) => {
+        let badgeColor = 'bg-slate-700 text-white';
+        let text = step.target || '?';
+        
+        riskHtml += `
+            <div class="flex-shrink-0 flex items-center gap-1.5 bg-rose-950/40 border border-rose-900/50 text-rose-400 text-[10px] font-mono font-bold px-2 py-1 rounded shadow-sm shadow-rose-900/20">
+                <span class="${badgeColor} px-1 rounded-sm text-[9px] leading-tight">${text}</span>
+                <span>-${formatDisplay(step.bet_amount, 'small', true)}</span>
+            </div>`;
+            
+        if (idx < lossSequence.length - 1) {
+            riskHtml += `<span class="text-slate-600 text-xs flex-shrink-0 font-bold">›</span>`;
+        }
+    });
+    container.innerHTML = riskHtml;
+};
+
+const renderNumberGrid = (lastSpunNumber = null, state) => {
+    const container = document.getElementById('number_grid_container');
+    
+    // Determine which container to highlight based on last spin
+    const phHighlight = (lastSpunNumber && lastSpunNumber.startsWith('p_high')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.02] z-10 shadow-white/20' : '';
+    const bhHighlight = (lastSpunNumber && lastSpunNumber.startsWith('b_high')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.02] z-10 shadow-white/20' : '';
+    const plHighlight = (lastSpunNumber && lastSpunNumber.startsWith('p_low')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.02] z-10 shadow-white/20' : '';
+    const blHighlight = (lastSpunNumber && lastSpunNumber.startsWith('b_low')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.02] z-10 shadow-white/20' : '';
+    const tHighlight = (lastSpunNumber === 'Tie') ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.03] z-10 shadow-white/20' : '';
+    
+    // Helper to generate the small score buttons
+    const genBtns = (prefix, nums, bgClass, hoverClass) => {
+        return nums.map(n => `<button onclick="recordSpin('${prefix}_${n}')" class="${bgClass} ${hoverClass} active:scale-90 text-white font-bold py-1.5 sm:py-2 rounded shadow transition-all text-xs sm:text-sm border border-black/20">${n}</button>`).join('');
+    };
+
+    const html = `
+        <!-- Player High (6-9) -->
+        <div class="col-span-3 bg-blue-500 rounded-xl p-2 flex flex-col justify-center items-center shadow-md transition-all duration-300 ${phHighlight}">
+            <div class="text-white font-black text-[10px] sm:text-xs tracking-wider mb-2 uppercase drop-shadow-sm">Player Win (6-9)</div>
+            <div class="grid grid-cols-4 gap-1 sm:gap-1.5 w-full">
+                ${genBtns('p_high', [6,7,8,9], 'bg-blue-700', 'hover:bg-blue-600')}
+            </div>
+        </div>
+        
+        <!-- Banker High (6-9) -->
+        <div class="col-span-3 bg-red-500 rounded-xl p-2 flex flex-col justify-center items-center shadow-md transition-all duration-300 ${bhHighlight}">
+            <div class="text-white font-black text-[10px] sm:text-xs tracking-wider mb-2 uppercase drop-shadow-sm">Banker Win (6-9)</div>
+            <div class="grid grid-cols-4 gap-1 sm:gap-1.5 w-full">
+                ${genBtns('b_high', [6,7,8,9], 'bg-red-700', 'hover:bg-red-600')}
+            </div>
+        </div>
+        
+        <!-- Player Low (0-5) -->
+        <div class="col-span-3 bg-blue-800 rounded-xl p-2 flex flex-col justify-center items-center shadow-md transition-all duration-300 mt-1 ${plHighlight}">
+            <div class="text-blue-100 font-black text-[10px] sm:text-xs tracking-wider mb-2 uppercase">Player Win (0-5)</div>
+            <div class="grid grid-cols-6 gap-1 sm:gap-1.5 w-full">
+                ${genBtns('p_low', [0,1,2,3,4,5], 'bg-blue-950', 'hover:bg-blue-700')}
+            </div>
+        </div>
+        
+        <!-- Banker Low (0-5) -->
+        <div class="col-span-3 bg-red-800 rounded-xl p-2 flex flex-col justify-center items-center shadow-md transition-all duration-300 mt-1 ${blHighlight}">
+            <div class="text-red-100 font-black text-[10px] sm:text-xs tracking-wider mb-2 uppercase">Banker Win (0-5)</div>
+            <div class="grid grid-cols-6 gap-1 sm:gap-1.5 w-full">
+                ${genBtns('b_low', [0,1,2,3,4,5], 'bg-red-950', 'hover:bg-red-700')}
+            </div>
+        </div>
+        
+        <!-- Tie -->
+        <button onclick="recordSpin('Tie')" class="col-span-6 mt-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold py-3 rounded-xl shadow-md transition-all text-sm sm:text-base ${tHighlight}">TIE (PUSH)</button>
+    `;
+    
+    container.innerHTML = `<div class="grid grid-cols-6 gap-2 sm:gap-3 relative mt-2">${html}</div>`;
+};
+
+const renderSequenceTracker = (state) => {
+    const container = document.getElementById('sequence_container');
+    container.innerHTML = '';
+    const pill = document.createElement('div');
+    let badgeColor = 'bg-slate-600 text-white';
+    let pillText = 'WAITING...';
+
+    if (state.next_color === 'Player') { badgeColor = 'bg-blue-600 text-white'; pillText = 'TARGET: P'; }
+    else if (state.next_color === 'Banker') { badgeColor = 'bg-red-600 text-white'; pillText = 'TARGET: B'; }
+    
+    pill.className = `w-auto px-2 h-5 sm:h-6 flex-shrink-0 rounded-full border flex items-center justify-center text-[9px] sm:text-[10px] font-bold tracking-wider transition-all duration-300 ${badgeColor} animate-intense-pulse z-20 opacity-100`;
+    pill.innerText = pillText;
+    container.appendChild(pill);
+};
+
+const updateTargetIndicator = (indicator, desc, targetType) => {
+    if (targetType === "Player") { indicator.className = "w-11 h-11 rounded-lg flex items-center justify-center font-bold text-white text-lg bg-blue-600 shadow-md shadow-blue-900/40"; indicator.innerText = "P"; if(desc) desc.innerText = "on Player"; }
+    else if (targetType === "Banker") { indicator.className = "w-11 h-11 rounded-lg flex items-center justify-center font-bold text-white text-lg bg-red-600 shadow-md shadow-red-900/40"; indicator.innerText = "B"; if(desc) desc.innerText = "on Banker"; }
+    else if (targetType === "Wait") { indicator.className = "w-11 h-11 rounded-lg flex items-center justify-center font-bold text-white text-lg bg-slate-600 shadow-md shadow-slate-900/40"; indicator.innerText = "W"; if(desc) desc.innerText = "Waiting for Result"; }
+};
+
+const updatePopupHUD = (state) => {
+    const popup = document.getElementById('next_play_popup');
+    if (!popup || state.status !== "ACTIVE" || popupDismissed) {
+        if(popup) popup.classList.add('opacity-0', 'translate-y-12', 'pointer-events-none');
+        return;
+    }
+    
+    const popupCard = popup.querySelector('div');
+    const indicator = document.getElementById('popup_color_indicator');
+    const colorDesc = document.getElementById('popup_color_desc');
+    const glowCircle = popup.querySelector('.bg-teal-500\\/10'); 
+    
+    let lastRealSpin = null;
+    for(let i=0; i<state.history.length; i++) {
+        if(state.history[i].outcome !== "Push" && state.history[i].outcome !== "Observed") {
+            lastRealSpin = state.history[i];
+            break;
+        }
+    }
+    
+    if (lastRealSpin) {
+        if (lastRealSpin.outcome === "Win") {
+            popupCard.className = "bg-emerald-950/95 border border-emerald-500/80 rounded-2xl p-4 shadow-2xl shadow-emerald-500/10 relative overflow-hidden backdrop-blur-md transition-all duration-300";
+            if (glowCircle) glowCircle.className = "absolute -right-6 -top-6 w-20 h-24 bg-emerald-400/20 rounded-full blur-xl";
+            document.querySelector('#next_play_popup svg').setAttribute('stroke', '#a7f3d0'); 
+        } else {
+            popupCard.className = "bg-rose-950/95 border border-rose-500/80 rounded-2xl p-4 shadow-2xl shadow-rose-500/10 relative overflow-hidden backdrop-blur-md transition-all duration-300";
+            if (glowCircle) glowCircle.className = "absolute -right-6 -top-6 w-20 h-24 bg-rose-400/20 rounded-full blur-xl";
+            document.querySelector('#next_play_popup svg').setAttribute('stroke', '#fecdd3'); 
+        }
+    } else {
+        popupCard.className = "bg-slate-950/95 border border-slate-700/80 rounded-2xl p-4 shadow-2xl relative overflow-hidden backdrop-blur-md transition-all duration-300";
+        if (glowCircle) glowCircle.className = "absolute -right-6 -top-6 w-20 h-24 bg-teal-500/10 rounded-full blur-xl";
+        document.querySelector('#next_play_popup svg').setAttribute('stroke', '#94a3b8'); 
+    }
+    
+    updateTargetIndicator(indicator, colorDesc, state.next_color);
+    document.getElementById('popup_bet_display').innerText = formatDisplay(state.next_bet, 'small', true);
+
+    const plColorClass = state.net_pnl > 0 ? 'text-emerald-400' : state.net_pnl < 0 ? 'text-rose-400' : 'text-slate-400';
+    const plContainer = document.getElementById('popup_mini_pl');
+    if (plContainer) plContainer.className = `text-[10px] uppercase font-semibold tracking-wider ${plColorClass}`;
+    
+    const plValEl = document.getElementById('popup_mini_pl_val');
+    if (plValEl) plValEl.innerHTML = (state.net_pnl >= 0 ? '+' : '') + formatDisplay(state.net_pnl, 'small', true);
+
+    const multiplier = parseInt(document.getElementById('unit_multiplier').value) || 100;
+    const inrVal = Math.abs(state.next_bet) * multiplier;
+    
+    const inrTargetEl = document.getElementById('popup_target_inr_val');
+    if (state.next_color === "Wait") {
+        if (inrTargetEl) inrTargetEl.innerHTML = `₹0`;
+    } else {
+        if (inrTargetEl) inrTargetEl.innerHTML = `₹${inrVal.toLocaleString('en-IN')}`;
+    }
+
+    const nextWinValEl = document.getElementById('popup_next_win_val');
+    if (state.next_color === "Wait") {
+        if (nextWinValEl) nextWinValEl.innerHTML = formatDisplay(state.bankroll, 'small', true);
+    } else {
+        let potentialProfit = state.next_bet;
+        if(state.next_color === "Banker") potentialProfit = state.next_bet * 0.95;
+        if (nextWinValEl) nextWinValEl.innerHTML = formatDisplay((state.bankroll + potentialProfit), 'small', true);
+    }
+
+    popup.classList.remove('opacity-0', 'translate-y-12', 'pointer-events-none');
+};
+
+const dismissPopup = () => {
+    popupDismissed = true;
+    const popup = document.getElementById('next_play_popup');
+    if(popup) popup.classList.add('opacity-0', 'translate-y-12', 'pointer-events-none');
+};
+
+const updateUI = (state) => {
+    currentState = state;
+
+    document.getElementById('bankroll').innerHTML = formatDisplay(state.bankroll, 'large');
+    const netPlElement = document.getElementById('net_pnl');
+    netPlElement.innerHTML = (state.net_pnl >= 0 ? '+' : '') + formatDisplay(state.net_pnl, 'medium');
+
+    if (state.net_pnl > 0) netPlElement.className = "text-xl font-bold text-emerald-400 transition-colors";
+    else if (state.net_pnl < 0) netPlElement.className = "text-xl font-bold text-rose-500 transition-colors";
+    else netPlElement.className = "text-xl font-bold text-slate-400 transition-colors";
+
+    const lastSpunNumber = state.history.length > 0 ? state.history[0].spun_number : null;
+    renderNumberGrid(lastSpunNumber, state);
+
+    const undoBtn = document.getElementById('undo_btn');
+    if (state.history.length === 0) {
+        undoBtn.disabled = true;
+        undoBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    } else {
+        undoBtn.disabled = false;
+        undoBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    document.getElementById('spin_count').innerText = state.spin_count;
+    document.getElementById('total_wins').innerText = state.total_wins;
+    document.getElementById('total_losses').innerText = state.total_losses;
+    document.getElementById('max_win_streak').innerText = state.max_win_streak;
+    document.getElementById('max_loss_streak').innerText = state.max_loss_streak;
+
+    renderSequenceTracker(state);
+
+    const gridContainer = document.getElementById('number_grid_container');
+    const alertBox = document.getElementById('status_alert');
+    const riskRadarSection = document.getElementById('risk_radar_section');
+
+    if (state.status === "ACTIVE") {
+        renderRiskRadar(state.predicted_loss_sequence);
+        gridContainer.classList.remove('opacity-50', 'pointer-events-none', 'grayscale');
+        riskRadarSection.classList.remove('hidden');
+        alertBox.className = "hidden";
+    } else {
+        gridContainer.classList.add('opacity-50', 'pointer-events-none', 'grayscale');
+        riskRadarSection.classList.add('hidden');
+        alertBox.classList.remove('hidden');
+
+        if (state.status === "TARGET_REACHED") {
+            alertBox.className = "flex flex-col space-y-3 rounded-xl p-3 border border-emerald-500 bg-emerald-950/30 text-emerald-400 mb-5";
+            document.getElementById('status_icon').innerText = "🎯";
+            document.getElementById('status_title').innerText = "Target Reached!";
+            document.getElementById('status_msg').innerText = "Congratulations! You hit your target. Session saved.";
+        } else if (state.status === "STOP_LOSS_HIT") {
+            alertBox.className = "flex flex-col space-y-3 rounded-xl p-3 border border-rose-500 bg-rose-950/30 text-rose-400 mb-5";
+            document.getElementById('status_icon').innerText = "🛑";
+            document.getElementById('status_title').innerText = "Stop Loss Hit";
+            document.getElementById('status_msg').innerText = "You have dropped to your stop loss limit.";
+        }
+    }
+    
+    updatePopupHUD(state);
+
+    const logBody = document.getElementById('log_body');
+    if (state.history.length === 0) {
+        logBody.innerHTML = `<tr><td colspan="7" class="py-12 text-center text-slate-600">No spins recorded.</td></tr>`;
+        return;
+    }
+
+    let logRows = "";
+    state.history.forEach(spin => {
+        const pnlClass = spin.outcome === "Win" ? "text-emerald-400 font-semibold" : spin.outcome === "Loss" ? "text-rose-500" : "text-slate-400";
+        
+        let targetCell = "";
+        if (spin.bet_on === "Player") targetCell = `<span class="text-blue-500 font-bold">🔵 Player</span>`;
+        else if (spin.bet_on === "Banker") targetCell = `<span class="text-red-500 font-bold">🔴 Banker</span>`;
+        else if (spin.bet_on === "Wait") targetCell = `<span class="text-slate-400 font-bold">👀 Wait</span>`;
+            
+        let spunColorClass = "text-emerald-400 bg-emerald-950/40 border-emerald-900/50"; 
+        
+        if (spin.spun_trait === 'Player') {
+            spunColorClass = "text-blue-400 bg-blue-950/40 border-blue-900/50";
+        } else if (spin.spun_trait === 'Banker') {
+            spunColorClass = "text-red-400 bg-red-950/40 border-red-900/50";
+        } else if (spin.spun_trait === 'Tie') {
+            spunColorClass = "text-emerald-400 bg-emerald-950/40 border-emerald-900/50";
+        }
+
+        // Logic to extract specific score from string (e.g. 'p_high_6' -> '6')
+        let exactScore = "";
+        if (typeof spin.spun_number === 'string' && spin.spun_number.includes('_')) {
+            exactScore = spin.spun_number.split('_').pop();
+        }
+
+        // Clean display text like "Player [6]"
+        let displayColorText = spin.spun_color; // fallback
+        if (spin.spun_trait === 'Player') displayColorText = `Player ${exactScore ? '['+exactScore+']' : ''}`;
+        else if (spin.spun_trait === 'Banker') displayColorText = `Banker ${exactScore ? '['+exactScore+']' : ''}`;
+        else if (spin.spun_trait === 'Tie') displayColorText = `Tie`;
+
+        const spunNumberCell = `<span class="font-black text-[11px] px-1.5 py-1 rounded border whitespace-nowrap ${spunColorClass}">${displayColorText}</span>`;
+        
+        let outcomeBadge = "";
+        if (spin.outcome === "Win") outcomeBadge = `<span class="bg-emerald-950/40 text-emerald-400 border border-emerald-800 px-2 py-1 rounded text-[9px] sm:text-[10px] font-bold uppercase tracking-wider font-mono">Win</span>`;
+        else if (spin.outcome === "Loss") outcomeBadge = `<span class="bg-rose-950/40 text-rose-400 border border-rose-900/40 px-2 py-1 rounded text-[9px] sm:text-[10px] font-bold uppercase tracking-wider font-mono">Loss</span>`;
+        else if (spin.outcome === "Observed") outcomeBadge = `<span class="bg-slate-800 text-slate-400 border border-slate-700 px-2 py-1 rounded text-[9px] sm:text-[10px] font-bold uppercase tracking-wider font-mono">Obsrv</span>`;
+        else outcomeBadge = `<span class="bg-slate-800 text-slate-400 border border-slate-700 px-2 py-1 rounded text-[9px] sm:text-[10px] font-bold uppercase tracking-wider font-mono">Push</span>`;
+
+        logRows += `
+            <tr class="hover:bg-slate-900/40 transition-colors">
+                <td class="py-3 px-2 text-slate-400 font-mono font-medium text-[11px]">${spin.spin}</td>
+                <td class="py-3 px-2">${targetCell}</td>
+                <td class="py-3 px-2 font-mono font-medium text-slate-200 text-xs">${formatDisplay(spin.bet_amount)}</td>
+                <td class="py-3 px-2 text-center">${spunNumberCell}</td>
+                <td class="py-3 px-2 text-center">${outcomeBadge}</td>
+                <td class="py-3 px-2 text-right font-mono ${pnlClass} text-xs">${spin.pnl >= 0 ? '+' : ''}${formatDisplay(spin.pnl)}</td>
+                <td class="py-3 px-2 text-right font-mono font-bold text-white text-xs">${formatDisplay(spin.bankroll)}</td>
+            </tr>
+        `;
+    });
+    logBody.innerHTML = logRows;
+};
+
+const continueSession = async () => {
+    try {
+        const response = await fetch('/continue', { method: 'POST' });
+        updateUI(await response.json());
+    } catch (err) { console.error("Error continuing session:", err); }
+};
+
+const recordSpin = async (number) => {
+    try {
+        const response = await fetch('/record', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ number: number }) });
+        updateUI(await response.json());
+    } catch (err) { console.error("Error writing spin outcome:", err); }
+};
+
+const undoSpin = async () => {
+    try {
+        const response = await fetch('/undo', { method: 'POST' });
+        updateUI(await response.json());
+    } catch (err) { console.error("Error undoing spin:", err); }
+};
+
+const resetSession = async () => {
+    if (confirm("Are you sure you want to reset the current session?")) {
+        try {
+            popupDismissed = false;
+            const response = await fetch('/reset', { method: 'POST' });
+            updateUI(await response.json());
+        } catch (err) { console.error("Error resetting session:", err); }
+    }
+};
+
+window.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const response = await fetch('/state');
+        updateUI(await response.json());
+    } catch (err) { console.error("Error pulling initial state:", err); }
+});
