@@ -11,9 +11,15 @@ class BaccaratTracker:
         self.current_bet = base_bet
         
         self.progression = progression
-        # Default Labouchere sequence to win 10 Units: 1 + 2 + 3 + 2 + 2
+        
+        # Labouchere State
         self.initial_lab_seq = [1, 2, 3, 2, 2]
         self.labouchere_seq = self.initial_lab_seq.copy()
+        
+        # 3-Step Ladder State (19 Levels matched exactly to spreadsheet)
+        self.ladder_bases = [0.2, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8]
+        self.ladder_level = 0
+        self.ladder_step = 1
         
         self.current_num_target = "Wait" # First hand is an observation spin
         self.ignore_limits = False
@@ -43,6 +49,21 @@ class BaccaratTracker:
                 bet_amount = self.labouchere_seq[0]
             else:
                 bet_amount = self.labouchere_seq[0] + self.labouchere_seq[-1]
+                
+        elif self.progression == "3step_ladder":
+            lvl = min(self.ladder_level, 18) # Bound to max 19 levels (index 18)
+            base = self.base_bet * self.ladder_bases[lvl]
+            
+            if self.ladder_step == 1:
+                bet_amount = base
+            elif self.ladder_step == 2:
+                bet_amount = 2 * base
+            elif self.ladder_step == 3:
+                if lvl < 15: # Levels 1-15 (Safety Net: Add base to win)
+                    bet_amount = 3 * base
+                else:        # Levels 16-19 (No Safety Net: Double previous win)
+                    bet_amount = 4 * base
+            bet_amount = round(bet_amount, 2)
                 
         if self.current_num_target == "Wait":
             return "Wait", 0
@@ -99,6 +120,7 @@ class BaccaratTracker:
             self.bankroll += pnl
             outcome_str = "Win"
             
+            # --- PROGRESSION WIN LOGIC ---
             if self.progression == "dalembert":
                 self.current_bet = max(self.base_bet, self.current_bet - self.base_bet)
             elif self.progression == "labouchere":
@@ -108,6 +130,13 @@ class BaccaratTracker:
                     self.labouchere_seq = self.labouchere_seq[1:-1]
                 if not self.labouchere_seq:
                     self.labouchere_seq = self.initial_lab_seq.copy()
+            elif self.progression == "3step_ladder":
+                if self.ladder_step == 3:
+                    # Target Hit (3 in a row)! Reset to beginning
+                    self.ladder_level = 0
+                    self.ladder_step = 1
+                else:
+                    self.ladder_step += 1
             
             self.total_wins += 1
             self.current_win_streak += 1
@@ -118,10 +147,22 @@ class BaccaratTracker:
             self.bankroll += pnl
             outcome_str = "Loss"
             
+            # --- PROGRESSION LOSS LOGIC ---
             if self.progression == "dalembert":
                 self.current_bet += self.base_bet
             elif self.progression == "labouchere":
                 self.labouchere_seq.append(bet_amount)
+            elif self.progression == "3step_ladder":
+                # Safety Net Check
+                if self.ladder_level < 15 and self.ladder_step == 3:
+                    # Broken even! Stay on same level, reset step.
+                    self.ladder_step = 1
+                else:
+                    # Move down the ladder
+                    self.ladder_level += 1
+                    self.ladder_step = 1
+                    if self.ladder_level > 18:
+                        self.ladder_level = 0 # Safety reset if complete ladder is busted
                 
             self.total_losses += 1
             self.current_loss_streak += 1
@@ -185,6 +226,7 @@ class BaccaratTracker:
             "bankroll": round(self.bankroll, 2), "net_pnl": round(self.bankroll - self.start_bankroll, 2),
             "spin_count": self.spin_count, "game_type": "baccarat", "strategy": "baccarat_num",
             "progression": self.progression, "labouchere_seq": self.labouchere_seq,
+            "ladder_level": self.ladder_level + 1, "ladder_step": self.ladder_step,
             "next_color": next_target, "next_bet": next_bet,
             "status": self.get_status(), "history": self.history[::-1],
             "total_wins": self.total_wins, "total_losses": self.total_losses,
@@ -218,7 +260,6 @@ def continue_session():
 
 @app.route('/change_progression', methods=['POST'])
 def change_prog_route():
-    # Force=True guarantees we extract JSON data securely
     data = request.get_json(force=True, silent=True) or {}
     new_prog = data.get('progression')
     if new_prog:
