@@ -3,24 +3,28 @@ let currentState = null;
 
 window.reRenderUI = () => { if (currentState) updateUI(currentState); };
 
-const formatDisplay = (val, size = 'small', hideInr = false) => {
+const formatDisplay = (val, size = 'small', hideSecondary = false) => {
     const multiplier = parseInt(document.getElementById('unit_multiplier').value) || 100;
     const isNegative = val < 0;
     const absVal = Math.abs(val);
     const inrVal = absVal * multiplier;
     const sign = isNegative ? '-' : '';
+    
+    // Formatting numbers
     const displayUnit = Number.isInteger(absVal) ? absVal : absVal.toFixed(2);
-    const unitPart = `${sign}${displayUnit} U`;
-    
-    if (hideInr) return unitPart;
-    
-    let inrSizeClass = 'text-xs text-slate-500';
-    if (size === 'large') { inrSizeClass = 'text-lg text-slate-400 font-medium'; }
-    else if (size === 'medium') { inrSizeClass = 'text-base text-slate-400 font-medium'; }
-    
     const inrDisplay = inrVal.toLocaleString('en-IN', { maximumFractionDigits: 2 });
-    const inrPart = `<span class="${inrSizeClass} ml-2"> (₹${inrDisplay})</span>`;
-    return `${unitPart}${inrPart}`;
+    
+    // Reverse Logic: INR is now primary, Unit is secondary
+    const primaryPart = `${sign}₹${inrDisplay}`;
+    
+    if (hideSecondary) return primaryPart;
+    
+    let secondarySizeClass = 'text-[10px] text-slate-500';
+    if (size === 'large') { secondarySizeClass = 'text-lg text-slate-400 font-medium'; }
+    else if (size === 'medium') { secondarySizeClass = 'text-base text-slate-400 font-medium'; }
+    
+    const secondaryPart = `<span class="${secondarySizeClass} ml-1">(${displayUnit} U)</span>`;
+    return `${primaryPart}${secondaryPart}`;
 };
 
 const renderRiskRadar = (lossSequence) => {
@@ -57,56 +61,51 @@ const renderRiskRadar = (lossSequence) => {
 const renderNumberGrid = (lastSpunNumber = null, state) => {
     const container = document.getElementById('number_grid_container');
     
-    // Determine which container to highlight based on last spin
-    const phHighlight = (lastSpunNumber && lastSpunNumber.startsWith('p_high')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.02] z-10 shadow-white/20' : '';
-    const bhHighlight = (lastSpunNumber && lastSpunNumber.startsWith('b_high')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.02] z-10 shadow-white/20' : '';
-    const plHighlight = (lastSpunNumber && lastSpunNumber.startsWith('p_low')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.02] z-10 shadow-white/20' : '';
-    const blHighlight = (lastSpunNumber && lastSpunNumber.startsWith('b_low')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.02] z-10 shadow-white/20' : '';
-    const tHighlight = (lastSpunNumber === 'Tie') ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.03] z-10 shadow-white/20' : '';
+    const phHighlight = (lastSpunNumber && lastSpunNumber.startsWith('p_high')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.01] z-10 shadow-white/20' : '';
+    const bhHighlight = (lastSpunNumber && lastSpunNumber.startsWith('b_high')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.01] z-10 shadow-white/20' : '';
+    const plHighlight = (lastSpunNumber && lastSpunNumber.startsWith('p_low')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.01] z-10 shadow-white/20' : '';
+    const blHighlight = (lastSpunNumber && lastSpunNumber.startsWith('b_low')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.01] z-10 shadow-white/20' : '';
+    const tHighlight = (lastSpunNumber === 'Tie') ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.02] z-10 shadow-white/20' : '';
     
-    // Helper to generate the small score buttons
     const genBtns = (prefix, nums, bgClass, hoverClass) => {
-        return nums.map(n => `<button onclick="recordSpin('${prefix}_${n}')" class="${bgClass} ${hoverClass} active:scale-90 text-white font-bold py-1.5 sm:py-2 rounded shadow transition-all text-xs sm:text-sm border border-black/20">${n}</button>`).join('');
+        return nums.map(n => `<button onclick="recordSpin('${prefix}_${n}')" class="flex-1 ${bgClass} ${hoverClass} active:scale-90 text-white font-bold py-2 sm:py-3 rounded shadow transition-all text-xs sm:text-base border border-black/20">${n}</button>`).join('');
     };
 
     const html = `
-        <!-- Player High (6-9) -->
-        <div class="col-span-3 bg-blue-500 rounded-xl p-2 flex flex-col justify-center items-center shadow-md transition-all duration-300 ${phHighlight}">
-            <div class="text-white font-black text-[10px] sm:text-xs tracking-wider mb-2 uppercase drop-shadow-sm">Player Win (6-9)</div>
-            <div class="grid grid-cols-4 gap-1 sm:gap-1.5 w-full">
-                ${genBtns('p_high', [6,7,8,9], 'bg-blue-700', 'hover:bg-blue-600')}
+        <div class="flex flex-col gap-2.5 sm:gap-3 w-full">
+            <div class="flex flex-col sm:flex-row sm:items-center bg-blue-600 rounded-xl p-2 sm:p-3 shadow-md transition-all duration-300 ${phHighlight}">
+                <div class="text-white font-black text-[11px] sm:text-sm tracking-wider mb-2 sm:mb-0 sm:w-1/3 uppercase drop-shadow-sm text-center sm:text-left">Player (6-9)</div>
+                <div class="flex gap-1.5 sm:gap-2 sm:w-2/3">
+                    ${genBtns('p_high', [6,7,8,9], 'bg-blue-800', 'hover:bg-blue-700')}
+                </div>
             </div>
-        </div>
-        
-        <!-- Banker High (6-9) -->
-        <div class="col-span-3 bg-red-500 rounded-xl p-2 flex flex-col justify-center items-center shadow-md transition-all duration-300 ${bhHighlight}">
-            <div class="text-white font-black text-[10px] sm:text-xs tracking-wider mb-2 uppercase drop-shadow-sm">Banker Win (6-9)</div>
-            <div class="grid grid-cols-4 gap-1 sm:gap-1.5 w-full">
-                ${genBtns('b_high', [6,7,8,9], 'bg-red-700', 'hover:bg-red-600')}
+            
+            <div class="flex flex-col sm:flex-row sm:items-center bg-red-600 rounded-xl p-2 sm:p-3 shadow-md transition-all duration-300 ${bhHighlight}">
+                <div class="text-white font-black text-[11px] sm:text-sm tracking-wider mb-2 sm:mb-0 sm:w-1/3 uppercase drop-shadow-sm text-center sm:text-left">Banker (6-9)</div>
+                <div class="flex gap-1.5 sm:gap-2 sm:w-2/3">
+                    ${genBtns('b_high', [6,7,8,9], 'bg-red-800', 'hover:bg-red-700')}
+                </div>
             </div>
-        </div>
-        
-        <!-- Player Low (0-5) -->
-        <div class="col-span-3 bg-blue-800 rounded-xl p-2 flex flex-col justify-center items-center shadow-md transition-all duration-300 mt-1 ${plHighlight}">
-            <div class="text-blue-100 font-black text-[10px] sm:text-xs tracking-wider mb-2 uppercase">Player Win (0-5)</div>
-            <div class="grid grid-cols-6 gap-1 sm:gap-1.5 w-full">
-                ${genBtns('p_low', [0,1,2,3,4,5], 'bg-blue-950', 'hover:bg-blue-700')}
+            
+            <div class="flex flex-col sm:flex-row sm:items-center bg-blue-900 rounded-xl p-2 sm:p-3 shadow-md transition-all duration-300 ${plHighlight}">
+                <div class="text-blue-100 font-black text-[11px] sm:text-sm tracking-wider mb-2 sm:mb-0 sm:w-1/3 uppercase text-center sm:text-left">Player (0-5)</div>
+                <div class="flex gap-1 sm:gap-1.5 sm:w-2/3">
+                    ${genBtns('p_low', [0,1,2,3,4,5], 'bg-blue-950', 'hover:bg-blue-800')}
+                </div>
             </div>
-        </div>
-        
-        <!-- Banker Low (0-5) -->
-        <div class="col-span-3 bg-red-800 rounded-xl p-2 flex flex-col justify-center items-center shadow-md transition-all duration-300 mt-1 ${blHighlight}">
-            <div class="text-red-100 font-black text-[10px] sm:text-xs tracking-wider mb-2 uppercase">Banker Win (0-5)</div>
-            <div class="grid grid-cols-6 gap-1 sm:gap-1.5 w-full">
-                ${genBtns('b_low', [0,1,2,3,4,5], 'bg-red-950', 'hover:bg-red-700')}
+            
+            <div class="flex flex-col sm:flex-row sm:items-center bg-red-900 rounded-xl p-2 sm:p-3 shadow-md transition-all duration-300 ${blHighlight}">
+                <div class="text-red-100 font-black text-[11px] sm:text-sm tracking-wider mb-2 sm:mb-0 sm:w-1/3 uppercase text-center sm:text-left">Banker (0-5)</div>
+                <div class="flex gap-1 sm:gap-1.5 sm:w-2/3">
+                    ${genBtns('b_low', [0,1,2,3,4,5], 'bg-red-950', 'hover:bg-red-800')}
+                </div>
             </div>
+            
+            <button onclick="recordSpin('Tie')" class="mt-1 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold py-3 sm:py-4 rounded-xl shadow-md transition-all text-sm sm:text-base ${tHighlight}">TIE (PUSH)</button>
         </div>
-        
-        <!-- Tie -->
-        <button onclick="recordSpin('Tie')" class="col-span-6 mt-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold py-3 rounded-xl shadow-md transition-all text-sm sm:text-base ${tHighlight}">TIE (PUSH)</button>
     `;
     
-    container.innerHTML = `<div class="grid grid-cols-6 gap-2 sm:gap-3 relative mt-2">${html}</div>`;
+    container.innerHTML = html;
 };
 
 const renderSequenceTracker = (state) => {
@@ -176,14 +175,15 @@ const updatePopupHUD = (state) => {
     const plValEl = document.getElementById('popup_mini_pl_val');
     if (plValEl) plValEl.innerHTML = (state.net_pnl >= 0 ? '+' : '') + formatDisplay(state.net_pnl, 'small', true);
 
-    const multiplier = parseInt(document.getElementById('unit_multiplier').value) || 100;
-    const inrVal = Math.abs(state.next_bet) * multiplier;
+    // Swap text label to "Target Unit" so the HUD makes sense with INR displayed above
+    const targetLabel = document.querySelector('#popup_target_inr span');
+    if(targetLabel) targetLabel.innerText = "Target Unit:";
     
     const inrTargetEl = document.getElementById('popup_target_inr_val');
     if (state.next_color === "Wait") {
-        if (inrTargetEl) inrTargetEl.innerHTML = `₹0`;
+        if (inrTargetEl) inrTargetEl.innerHTML = `0 U`;
     } else {
-        if (inrTargetEl) inrTargetEl.innerHTML = `₹${inrVal.toLocaleString('en-IN')}`;
+        if (inrTargetEl) inrTargetEl.innerHTML = `${state.next_bet} U`;
     }
 
     const nextWinValEl = document.getElementById('popup_next_win_val');
@@ -206,6 +206,23 @@ const dismissPopup = () => {
 
 const updateUI = (state) => {
     currentState = state;
+
+    const progSel = document.getElementById('progression_selector');
+    if (progSel && state.progression) progSel.value = state.progression;
+    
+    const seqInput = document.getElementById('custom_sequence_input');
+    const seqLabel = document.getElementById('seq_label');
+    if (state.progression === 'labouchere') {
+        seqLabel.innerText = "LAB";
+        seqInput.value = state.labouchere_seq.join(' - ');
+        seqInput.classList.remove('w-16', 'text-slate-500');
+        seqInput.classList.add('w-32', 'text-teal-400');
+    } else {
+        seqLabel.innerText = "SEQ";
+        seqInput.value = "DYNAMIC";
+        seqInput.classList.add('w-16', 'text-slate-500');
+        seqInput.classList.remove('w-32', 'text-teal-400');
+    }
 
     document.getElementById('bankroll').innerHTML = formatDisplay(state.bankroll, 'large');
     const netPlElement = document.getElementById('net_pnl');
@@ -289,14 +306,12 @@ const updateUI = (state) => {
             spunColorClass = "text-emerald-400 bg-emerald-950/40 border-emerald-900/50";
         }
 
-        // Logic to extract specific score from string (e.g. 'p_high_6' -> '6')
         let exactScore = "";
         if (typeof spin.spun_number === 'string' && spin.spun_number.includes('_')) {
             exactScore = spin.spun_number.split('_').pop();
         }
 
-        // Clean display text like "Player [6]"
-        let displayColorText = spin.spun_color; // fallback
+        let displayColorText = spin.spun_color; 
         if (spin.spun_trait === 'Player') displayColorText = `Player ${exactScore ? '['+exactScore+']' : ''}`;
         else if (spin.spun_trait === 'Banker') displayColorText = `Banker ${exactScore ? '['+exactScore+']' : ''}`;
         else if (spin.spun_trait === 'Tie') displayColorText = `Tie`;
@@ -324,6 +339,32 @@ const updateUI = (state) => {
     logBody.innerHTML = logRows;
 };
 
+const changeProgression = async () => {
+    const newProg = document.getElementById('progression_selector').value;
+    if (currentState && currentState.progression === newProg) return;
+    
+    try {
+        popupDismissed = false;
+        const response = await fetch('/change_progression', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ progression: newProg }) 
+        });
+        
+        if (!response.ok) {
+            alert("SERVER ERROR: The server rejected the request. Please make sure you RESTARTED your Python app (Ctrl+C, then 'python app.py').");
+            if(currentState) document.getElementById('progression_selector').value = currentState.progression;
+            return;
+        }
+        
+        updateUI(await response.json());
+    } catch (err) { 
+        console.error("Error changing progression:", err); 
+        alert("NETWORK ERROR: Could not reach the server to recalculate. Did you restart app.py?");
+        if(currentState) document.getElementById('progression_selector').value = currentState.progression;
+    }
+};
+
 const continueSession = async () => {
     try {
         const response = await fetch('/continue', { method: 'POST' });
@@ -349,7 +390,12 @@ const resetSession = async () => {
     if (confirm("Are you sure you want to reset the current session?")) {
         try {
             popupDismissed = false;
-            const response = await fetch('/reset', { method: 'POST' });
+            const currentProg = document.getElementById('progression_selector').value;
+            const response = await fetch('/reset', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ progression: currentProg })
+            });
             updateUI(await response.json());
         } catch (err) { console.error("Error resetting session:", err); }
     }

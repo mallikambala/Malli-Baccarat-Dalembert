@@ -4,11 +4,16 @@ app = Flask(__name__, template_folder='templates', static_folder='static')
 app.secret_key = "mallis_baccarat_super_secret_key"
 
 class BaccaratTracker:
-    def __init__(self, start_bankroll=75, base_bet=1):
+    def __init__(self, start_bankroll=75, base_bet=1, progression="dalembert"):
         self.start_bankroll = float(start_bankroll)
         self.bankroll = float(start_bankroll)
         self.base_bet = base_bet
         self.current_bet = base_bet
+        
+        self.progression = progression
+        # Default Labouchere sequence to win 10 Units: 1 + 2 + 3 + 2 + 2
+        self.initial_lab_seq = [1, 2, 3, 2, 2]
+        self.labouchere_seq = self.initial_lab_seq.copy()
         
         self.current_num_target = "Wait" # First hand is an observation spin
         self.ignore_limits = False
@@ -28,9 +33,21 @@ class BaccaratTracker:
     def get_next_bet(self):
         if self.get_status() != "ACTIVE":
             return None, 0
+        
+        bet_amount = self.current_bet
+        
+        if self.progression == "labouchere":
+            if not self.labouchere_seq:
+                self.labouchere_seq = self.initial_lab_seq.copy()
+            if len(self.labouchere_seq) == 1:
+                bet_amount = self.labouchere_seq[0]
+            else:
+                bet_amount = self.labouchere_seq[0] + self.labouchere_seq[-1]
+                
         if self.current_num_target == "Wait":
             return "Wait", 0
-        return self.current_num_target, self.current_bet
+            
+        return self.current_num_target, bet_amount
 
     def get_predicted_loss_sequence(self):
         if self.get_status() != "ACTIVE": return []
@@ -81,7 +98,17 @@ class BaccaratTracker:
             pnl = bet_amount * 0.95 if bet_target == 'Banker' else float(bet_amount)
             self.bankroll += pnl
             outcome_str = "Win"
-            self.current_bet = max(self.base_bet, self.current_bet - self.base_bet)
+            
+            if self.progression == "dalembert":
+                self.current_bet = max(self.base_bet, self.current_bet - self.base_bet)
+            elif self.progression == "labouchere":
+                if len(self.labouchere_seq) <= 2:
+                    self.labouchere_seq = [] 
+                else:
+                    self.labouchere_seq = self.labouchere_seq[1:-1]
+                if not self.labouchere_seq:
+                    self.labouchere_seq = self.initial_lab_seq.copy()
+            
             self.total_wins += 1
             self.current_win_streak += 1
             self.current_loss_streak = 0
@@ -90,13 +117,17 @@ class BaccaratTracker:
             pnl = float(-bet_amount)
             self.bankroll += pnl
             outcome_str = "Loss"
-            self.current_bet += self.base_bet
+            
+            if self.progression == "dalembert":
+                self.current_bet += self.base_bet
+            elif self.progression == "labouchere":
+                self.labouchere_seq.append(bet_amount)
+                
             self.total_losses += 1
             self.current_loss_streak += 1
             self.current_win_streak = 0
             if self.current_loss_streak > self.max_loss_streak: self.max_loss_streak = self.current_loss_streak
 
-        # Target mapping using startswith allows passing exact scores like p_high_8
         if not is_push:
             if val.startswith('p_high'): self.current_num_target = 'Player'
             elif val.startswith('b_high'): self.current_num_target = 'Banker'
@@ -114,9 +145,24 @@ class BaccaratTracker:
         if not self.history: return self.get_state()
         previous_spins = [spin['spun_number'] for spin in self.history[:-1]]
         was_ignored = self.ignore_limits
-        self.__init__(self.start_bankroll, self.base_bet)
+        current_progression = self.progression
+        
+        self.__init__(self.start_bankroll, self.base_bet, current_progression)
         self.ignore_limits = was_ignored
         for num in previous_spins: self.record_outcome(num)
+        return self.get_state()
+
+    def change_progression(self, new_progression):
+        previous_spins = [spin['spun_number'] for spin in self.history]
+        was_ignored = self.ignore_limits
+        
+        self.__init__(self.start_bankroll, self.base_bet, new_progression)
+        self.ignore_limits = True
+        
+        for num in previous_spins:
+            self.record_outcome(num)
+            
+        self.ignore_limits = was_ignored
         return self.get_state()
 
     def is_session_over(self):
@@ -129,14 +175,16 @@ class BaccaratTracker:
         elif self.bankroll <= self.stop_loss_bankroll: return "STOP_LOSS_HIT"
         return "ACTIVE"
 
-    def reset(self):
-        self.__init__(self.start_bankroll, self.base_bet)
+    def reset(self, progression=None):
+        target_prog = progression if progression else self.progression
+        self.__init__(self.start_bankroll, self.base_bet, target_prog)
 
     def get_state(self):
         next_target, next_bet = self.get_next_bet()
         return {
             "bankroll": round(self.bankroll, 2), "net_pnl": round(self.bankroll - self.start_bankroll, 2),
             "spin_count": self.spin_count, "game_type": "baccarat", "strategy": "baccarat_num",
+            "progression": self.progression, "labouchere_seq": self.labouchere_seq,
             "next_color": next_target, "next_bet": next_bet,
             "status": self.get_status(), "history": self.history[::-1],
             "total_wins": self.total_wins, "total_losses": self.total_losses,
@@ -154,7 +202,7 @@ def get_state(): return jsonify(tracker.get_state())
 
 @app.route('/record', methods=['POST'])
 def record():
-    data = request.get_json() or {}
+    data = request.get_json(force=True, silent=True) or {}
     spun_value = data.get('number')
     if spun_value is not None:
         return jsonify(tracker.record_outcome(spun_value))
@@ -168,9 +216,19 @@ def continue_session():
     tracker.ignore_limits = True
     return jsonify(tracker.get_state())
 
+@app.route('/change_progression', methods=['POST'])
+def change_prog_route():
+    # Force=True guarantees we extract JSON data securely
+    data = request.get_json(force=True, silent=True) or {}
+    new_prog = data.get('progression')
+    if new_prog:
+        tracker.change_progression(new_prog)
+    return jsonify(tracker.get_state())
+
 @app.route('/reset', methods=['POST'])
 def reset():
-    tracker.reset()
+    data = request.get_json(force=True, silent=True) or {}
+    tracker.reset(progression=data.get('progression'))
     return jsonify(tracker.get_state())
 
 if __name__ == '__main__':
