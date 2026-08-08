@@ -3,21 +3,20 @@ let currentState = null;
 
 window.reRenderUI = () => { if (currentState) updateUI(currentState); };
 
-const formatDisplay = (val, size = 'small', hideInr = false) => {
+const formatDisplay = (val, size = 'small', hideUnit = false) => {
     const multiplier = parseInt(document.getElementById('unit_multiplier').value) || 100;
     const isNegative = val < 0;
     const absVal = Math.abs(val);
     const inrVal = absVal * multiplier;
     const sign = isNegative ? '-' : '';
     
-    // Formatting numbers
     const displayUnit = Number.isInteger(absVal) ? absVal : absVal.toFixed(2);
     const inrDisplay = inrVal.toLocaleString('en-IN', { maximumFractionDigits: 2 });
     
-    // Reverse Logic: INR is now primary, Unit is secondary
     const primaryPart = `${sign}₹${inrDisplay}`;
     
-    if (hideInr) return primaryPart;
+    // If hideUnit is true, we ONLY return the ₹ amount
+    if (hideUnit) return primaryPart; 
     
     let secondarySizeClass = 'text-[10px] text-slate-500';
     if (size === 'large') { secondarySizeClass = 'text-lg text-slate-400 font-medium'; }
@@ -61,7 +60,6 @@ const renderRiskRadar = (lossSequence) => {
 const renderNumberGrid = (lastSpunNumber = null, state) => {
     const container = document.getElementById('number_grid_container');
     
-    // Highlight the active parent block (Player or Banker or Tie)
     const pHighlight = (lastSpunNumber && lastSpunNumber.startsWith('p_')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.01] z-10' : '';
     const bHighlight = (lastSpunNumber && lastSpunNumber.startsWith('b_')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.01] z-10' : '';
     const tHighlight = (lastSpunNumber === 'Tie') ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-950 scale-[1.02] z-10' : '';
@@ -78,33 +76,26 @@ const renderNumberGrid = (lastSpunNumber = null, state) => {
     const html = `
         <div class="flex flex-col gap-3 sm:gap-4 w-full">
 
-            <!-- BANKER BLOCK (Top) -->
             <div class="bg-red-900/30 border border-red-800/60 rounded-2xl p-3 sm:p-4 shadow-inner transition-all duration-300 flex flex-col gap-2 sm:gap-3 w-full ${bHighlight}">
                 <div class="text-red-300 font-black text-[10px] sm:text-xs tracking-widest uppercase text-center drop-shadow-sm mb-1">BANKER</div>
-                <!-- Banker Low 0-5 (Grid of 6) -->
                 <div class="grid grid-cols-6 gap-1.5 sm:gap-2 w-full">
                     ${genBtns('b_low', [0,1,2,3,4,5], 'bg-red-800 hover:bg-red-700', 'rgb(69,10,10)')}
                 </div>
-                <!-- Banker High 6-9 (Grid of 4) -->
                 <div class="grid grid-cols-4 gap-1.5 sm:gap-2 w-full mt-1 sm:mt-1.5">
                     ${genBtns('b_high', [6,7,8,9], 'bg-red-600 hover:bg-red-500', 'rgb(153,27,27)')}
                 </div>
             </div>
 
-            <!-- PLAYER BLOCK (Middle) -->
             <div class="bg-blue-900/30 border border-blue-800/60 rounded-2xl p-3 sm:p-4 shadow-inner transition-all duration-300 flex flex-col gap-2 sm:gap-3 w-full ${pHighlight}">
                 <div class="text-blue-300 font-black text-[10px] sm:text-xs tracking-widest uppercase text-center drop-shadow-sm mb-1">PLAYER</div>
-                <!-- Player Low 0-5 (Grid of 6) -->
                 <div class="grid grid-cols-6 gap-1.5 sm:gap-2 w-full">
                     ${genBtns('p_low', [0,1,2,3,4,5], 'bg-blue-800 hover:bg-blue-700', 'rgb(23,37,84)')}
                 </div>
-                <!-- Player High 6-9 (Grid of 4) -->
                 <div class="grid grid-cols-4 gap-1.5 sm:gap-2 w-full mt-1 sm:mt-1.5">
                     ${genBtns('p_high', [6,7,8,9], 'bg-blue-600 hover:bg-blue-500', 'rgb(30,58,138)')}
                 </div>
             </div>
 
-            <!-- TIE BUTTON (Bottom) -->
             <div class="w-full mt-1">
                 <button onclick="recordSpin('Tie')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 sm:py-3.5 rounded-xl border-t border-white/20 shadow-[0_4px_0_rgb(4,120,87)] active:shadow-[0_0px_0_rgb(4,120,87)] active:translate-y-[4px] transition-all text-sm sm:text-base tracking-widest ${tHighlight}">TIE (PUSH)</button>
             </div>
@@ -242,6 +233,33 @@ const updateUI = (state) => {
     else if (state.net_pnl < 0) netPlElement.className = "text-lg sm:text-xl font-bold text-rose-500 transition-colors";
     else netPlElement.className = "text-lg sm:text-xl font-bold text-slate-400 transition-colors";
 
+    // --- Calculate Start, High, and Low amounts ---
+    let startBankroll = 75.0; 
+    let maxBankroll = startBankroll;
+    let minBankroll = startBankroll;
+
+    if (state.history && state.history.length > 0) {
+        const oldestSpin = state.history[state.history.length - 1];
+        startBankroll = oldestSpin.bankroll - oldestSpin.pnl;
+        
+        maxBankroll = startBankroll;
+        minBankroll = startBankroll;
+
+        state.history.forEach(spin => {
+            if (spin.bankroll > maxBankroll) maxBankroll = spin.bankroll;
+            if (spin.bankroll < minBankroll) minBankroll = spin.bankroll;
+        });
+    }
+
+    const startEl = document.getElementById('start_amount');
+    const highEl = document.getElementById('highest_amount');
+    const lowEl = document.getElementById('lowest_amount');
+    
+    if (startEl) startEl.innerHTML = formatDisplay(startBankroll, 'small', true);
+    if (highEl) highEl.innerHTML = formatDisplay(maxBankroll, 'small', true); 
+    if (lowEl) lowEl.innerHTML = formatDisplay(minBankroll, 'small', true);
+    // ------------------------------------------------
+
     const lastSpunNumber = state.history.length > 0 ? state.history[0].spun_number : null;
     renderNumberGrid(lastSpunNumber, state);
 
@@ -297,6 +315,40 @@ const updateUI = (state) => {
         return;
     }
 
+    if (state.history && state.history.length > 0) {
+        let runWin = 0;
+        let runLoss = 0;
+        let runAlt = 0;
+        let lastRealOutcome = null;
+        
+        for (let i = state.history.length - 1; i >= 0; i--) {
+            let s = state.history[i];
+            
+            if (s.outcome === 'Win' || s.outcome === 'Loss') {
+                if (lastRealOutcome === null) {
+                    runAlt = 1;
+                } else if (s.outcome !== lastRealOutcome) {
+                    runAlt++;
+                } else {
+                    runAlt = 1;
+                }
+                lastRealOutcome = s.outcome;
+
+                if (s.outcome === 'Win') {
+                    runWin++;
+                    runLoss = 0;
+                } else {
+                    runLoss++;
+                    runWin = 0;
+                }
+            }
+            
+            s.runWin = runWin;
+            s.runLoss = runLoss;
+            s.runAlt = runAlt;
+        }
+    }
+
     let logRows = "";
     state.history.forEach(spin => {
         const pnlClass = spin.outcome === "Win" ? "text-emerald-400 font-semibold" : spin.outcome === "Loss" ? "text-rose-500" : "text-slate-400";
@@ -329,20 +381,43 @@ const updateUI = (state) => {
         const spunNumberCell = `<span class="font-black text-[10px] px-1.5 py-0.5 rounded border whitespace-nowrap ${spunColorClass}">${displayColorText}</span>`;
         
         let outcomeBadge = "";
-        if (spin.outcome === "Win") outcomeBadge = `<span class="bg-emerald-950/40 text-emerald-400 border border-emerald-800 px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider font-mono">Win</span>`;
-        else if (spin.outcome === "Loss") outcomeBadge = `<span class="bg-rose-950/40 text-rose-400 border border-rose-900/40 px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider font-mono">Loss</span>`;
-        else if (spin.outcome === "Observed") outcomeBadge = `<span class="bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider font-mono">Obsrv</span>`;
-        else outcomeBadge = `<span class="bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider font-mono">Push</span>`;
+        let rowBgClass = "hover:bg-slate-900/40"; 
+        
+        if (spin.outcome === "Win") {
+            if (spin.runWin >= 5) {
+                rowBgClass = "bg-amber-900/10 hover:bg-amber-900/30";
+                outcomeBadge = `<span class="bg-amber-950/80 text-amber-400 border border-amber-500/80 px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider font-mono shadow-[0_0_8px_rgba(251,191,36,0.3)]">🔥 WIN x${spin.runWin}</span>`;
+            } else if (spin.runAlt >= 5) {
+                rowBgClass = "bg-fuchsia-900/20 hover:bg-fuchsia-900/40";
+                outcomeBadge = `<span class="bg-fuchsia-950/80 text-fuchsia-400 border border-fuchsia-500/80 px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider font-mono shadow-[0_0_8px_rgba(192,38,211,0.3)]">🔀 ALT x${spin.runAlt}</span>`;
+            } else {
+                outcomeBadge = `<span class="bg-emerald-950/40 text-emerald-400 border border-emerald-800 px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider font-mono">Win</span>`;
+            }
+        } else if (spin.outcome === "Loss") {
+            if (spin.runLoss >= 5) {
+                rowBgClass = "bg-rose-950/40 hover:bg-rose-900/50";
+                outcomeBadge = `<span class="bg-rose-900/80 text-rose-200 border border-rose-500 px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider font-mono shadow-[0_0_8px_rgba(225,29,72,0.4)]">⚠️ LOSS x${spin.runLoss}</span>`;
+            } else if (spin.runAlt >= 5) {
+                rowBgClass = "bg-fuchsia-900/20 hover:bg-fuchsia-900/40";
+                outcomeBadge = `<span class="bg-fuchsia-950/80 text-fuchsia-400 border border-fuchsia-500/80 px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider font-mono shadow-[0_0_8px_rgba(192,38,211,0.3)]">🔀 ALT x${spin.runAlt}</span>`;
+            } else {
+                outcomeBadge = `<span class="bg-rose-950/40 text-rose-400 border border-rose-900/40 px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider font-mono">Loss</span>`;
+            }
+        } else if (spin.outcome === "Observed") {
+            outcomeBadge = `<span class="bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider font-mono">Obsrv</span>`;
+        } else {
+            outcomeBadge = `<span class="bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider font-mono">Push</span>`;
+        }
 
         logRows += `
-            <tr class="hover:bg-slate-900/40 transition-colors">
+            <tr class="${rowBgClass} transition-colors">
                 <td class="py-1.5 px-2 text-slate-400 font-mono font-medium text-[10px] sm:text-[11px]">${spin.spin}</td>
                 <td class="py-1.5 px-2">${targetCell}</td>
-                <td class="py-1.5 px-2 font-mono font-medium text-slate-200 text-[10px] sm:text-xs">${formatDisplay(spin.bet_amount)}</td>
+                <td class="py-1.5 px-2 font-mono font-medium text-slate-200 text-[10px] sm:text-xs">${formatDisplay(spin.bet_amount, 'small', true)}</td>
                 <td class="py-1.5 px-2 text-center">${spunNumberCell}</td>
                 <td class="py-1.5 px-2 text-center">${outcomeBadge}</td>
-                <td class="py-1.5 px-2 text-right font-mono ${pnlClass} text-[10px] sm:text-xs">${spin.pnl >= 0 ? '+' : ''}${formatDisplay(spin.pnl)}</td>
-                <td class="py-1.5 px-2 text-right font-mono font-bold text-white text-[10px] sm:text-xs">${formatDisplay(spin.bankroll)}</td>
+                <td class="py-1.5 px-2 text-right font-mono ${pnlClass} text-[10px] sm:text-xs">${spin.pnl >= 0 ? '+' : ''}${formatDisplay(spin.pnl, 'small', true)}</td>
+                <td class="py-1.5 px-2 text-right font-mono font-bold text-white text-[10px] sm:text-xs">${formatDisplay(spin.bankroll, 'small', true)}</td>
             </tr>
         `;
     });
