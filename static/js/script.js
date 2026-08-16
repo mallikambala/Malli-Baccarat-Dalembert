@@ -14,8 +14,6 @@ const formatDisplay = (val, size = 'small', hideUnit = false) => {
     const inrDisplay = inrVal.toLocaleString('en-IN', { maximumFractionDigits: 2 });
     
     const primaryPart = `${sign}₹${inrDisplay}`;
-    
-    // If hideUnit is true, we ONLY return the ₹ amount
     if (hideUnit) return primaryPart; 
     
     let secondarySizeClass = 'text-[10px] text-slate-500';
@@ -60,61 +58,99 @@ const renderRiskRadar = (lossSequence) => {
 const renderNumberGrid = (lastSpunNumber = null, state) => {
     const container = document.getElementById('number_grid_container');
     
-    const pHighlight = (lastSpunNumber && lastSpunNumber.startsWith('p_')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.01] z-10' : '';
-    const bHighlight = (lastSpunNumber && lastSpunNumber.startsWith('b_')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.01] z-10' : '';
-    const tHighlight = (lastSpunNumber === 'Tie') ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-950 scale-[1.02] z-10' : '';
-    
-    const genBtns = (prefix, nums, bgClass, shadowColor) => {
-        return nums.map(n => `
-            <button onclick="recordSpin('${prefix}_${n}')" 
-                    class="w-full flex items-center justify-center ${bgClass} text-white font-black py-2.5 sm:py-3 rounded-xl transition-all text-sm sm:text-base border-t border-white/20 shadow-[0_3px_0_${shadowColor}] active:shadow-[0_0px_0_${shadowColor}] active:translate-y-[3px]">
-                ${n}
+    if (state.game_type === 'baccarat') {
+        const pHighlight = (lastSpunNumber && lastSpunNumber.startsWith('p_')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.01] z-10' : '';
+        const bHighlight = (lastSpunNumber && lastSpunNumber.startsWith('b_')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.01] z-10' : '';
+        const tHighlight = (lastSpunNumber === 'Tie') ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-950 scale-[1.02] z-10' : '';
+        
+        const genBtns = (prefix, nums, bgClass, shadowColor) => {
+            return nums.map(n => `
+                <button onclick="recordSpin('${prefix}_${n}')" 
+                        class="w-full flex items-center justify-center ${bgClass} text-white font-black py-2.5 sm:py-3 rounded-xl transition-all text-sm sm:text-base border-t border-white/20 shadow-[0_3px_0_${shadowColor}] active:shadow-[0_0px_0_${shadowColor}] active:translate-y-[3px]">
+                    ${n}
+                </button>
+            `).join('');
+        };
+
+        container.innerHTML = `
+            <div class="flex flex-col gap-3 sm:gap-4 w-full">
+                <div class="bg-red-900/30 border border-red-800/60 rounded-2xl p-3 sm:p-4 shadow-inner transition-all duration-300 flex flex-col gap-2 sm:gap-3 w-full ${bHighlight}">
+                    <div class="text-red-300 font-black text-[10px] sm:text-xs tracking-widest uppercase text-center drop-shadow-sm mb-1">BANKER</div>
+                    <div class="grid grid-cols-6 gap-1.5 sm:gap-2 w-full">
+                        ${genBtns('b_low', [0,1,2,3,4,5], 'bg-red-800 hover:bg-red-700', 'rgb(69,10,10)')}
+                    </div>
+                    <div class="grid grid-cols-4 gap-1.5 sm:gap-2 w-full mt-1 sm:mt-1.5">
+                        ${genBtns('b_high', [6,7,8,9], 'bg-red-600 hover:bg-red-500', 'rgb(153,27,27)')}
+                    </div>
+                </div>
+                <div class="bg-blue-900/30 border border-blue-800/60 rounded-2xl p-3 sm:p-4 shadow-inner transition-all duration-300 flex flex-col gap-2 sm:gap-3 w-full ${pHighlight}">
+                    <div class="text-blue-300 font-black text-[10px] sm:text-xs tracking-widest uppercase text-center drop-shadow-sm mb-1">PLAYER</div>
+                    <div class="grid grid-cols-6 gap-1.5 sm:gap-2 w-full">
+                        ${genBtns('p_low', [0,1,2,3,4,5], 'bg-blue-800 hover:bg-blue-700', 'rgb(23,37,84)')}
+                    </div>
+                    <div class="grid grid-cols-4 gap-1.5 sm:gap-2 w-full mt-1 sm:mt-1.5">
+                        ${genBtns('p_high', [6,7,8,9], 'bg-blue-600 hover:bg-blue-500', 'rgb(30,58,138)')}
+                    </div>
+                </div>
+                <div class="w-full mt-1">
+                    <button onclick="recordSpin('Tie')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 sm:py-3.5 rounded-xl border-t border-white/20 shadow-[0_4px_0_rgb(4,120,87)] active:shadow-[0_0px_0_rgb(4,120,87)] active:translate-y-[4px] transition-all text-sm sm:text-base tracking-widest ${tHighlight}">TIE (PUSH)</button>
+                </div>
+            </div>
+        `;
+    } else if (state.game_type === 'roulette') {
+        const reds = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+        let buttonsHtml = '';
+        
+        for (let i = 1; i <= 36; i++) {
+            const isRed = reds.includes(i);
+            const bgClass = isRed ? 'bg-red-600 hover:bg-red-500' : 'bg-slate-800 hover:bg-slate-700';
+            const shadowColor = isRed ? 'rgb(153,27,27)' : 'rgb(15,23,42)';
+            const highlight = (lastSpunNumber == i) ? 'ring-2 ring-white scale-105 z-10' : '';
+            
+            buttonsHtml += `
+                <button onclick="recordSpin('${i}')" 
+                        class="w-full flex items-center justify-center ${bgClass} text-white font-black py-2.5 sm:py-3 rounded-lg transition-all text-sm sm:text-base border-t border-white/20 shadow-[0_3px_0_${shadowColor}] active:shadow-[0_0px_0_${shadowColor}] active:translate-y-[3px] ${highlight}">
+                    ${i}
+                </button>
+            `;
+        }
+
+        const zHighlight = (lastSpunNumber == 0) ? 'ring-2 ring-white scale-105 z-10' : '';
+        const zeroHtml = `
+            <button onclick="recordSpin('0')" 
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 sm:py-3.5 mb-2 sm:mb-3 rounded-xl border-t border-white/20 shadow-[0_4px_0_rgb(4,120,87)] active:shadow-[0_0px_0_rgb(4,120,87)] active:translate-y-[4px] transition-all text-sm sm:text-base tracking-widest ${zHighlight}">
+                0 (GREEN)
             </button>
-        `).join('');
-    };
+        `;
 
-    const html = `
-        <div class="flex flex-col gap-3 sm:gap-4 w-full">
-
-            <div class="bg-red-900/30 border border-red-800/60 rounded-2xl p-3 sm:p-4 shadow-inner transition-all duration-300 flex flex-col gap-2 sm:gap-3 w-full ${bHighlight}">
-                <div class="text-red-300 font-black text-[10px] sm:text-xs tracking-widest uppercase text-center drop-shadow-sm mb-1">BANKER</div>
-                <div class="grid grid-cols-6 gap-1.5 sm:gap-2 w-full">
-                    ${genBtns('b_low', [0,1,2,3,4,5], 'bg-red-800 hover:bg-red-700', 'rgb(69,10,10)')}
-                </div>
-                <div class="grid grid-cols-4 gap-1.5 sm:gap-2 w-full mt-1 sm:mt-1.5">
-                    ${genBtns('b_high', [6,7,8,9], 'bg-red-600 hover:bg-red-500', 'rgb(153,27,27)')}
+        container.innerHTML = `
+            <div class="flex flex-col w-full max-w-sm mx-auto h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                ${zeroHtml}
+                <div class="grid grid-cols-3 gap-1.5 sm:gap-2">
+                    ${buttonsHtml}
                 </div>
             </div>
-
-            <div class="bg-blue-900/30 border border-blue-800/60 rounded-2xl p-3 sm:p-4 shadow-inner transition-all duration-300 flex flex-col gap-2 sm:gap-3 w-full ${pHighlight}">
-                <div class="text-blue-300 font-black text-[10px] sm:text-xs tracking-widest uppercase text-center drop-shadow-sm mb-1">PLAYER</div>
-                <div class="grid grid-cols-6 gap-1.5 sm:gap-2 w-full">
-                    ${genBtns('p_low', [0,1,2,3,4,5], 'bg-blue-800 hover:bg-blue-700', 'rgb(23,37,84)')}
-                </div>
-                <div class="grid grid-cols-4 gap-1.5 sm:gap-2 w-full mt-1 sm:mt-1.5">
-                    ${genBtns('p_high', [6,7,8,9], 'bg-blue-600 hover:bg-blue-500', 'rgb(30,58,138)')}
-                </div>
-            </div>
-
-            <div class="w-full mt-1">
-                <button onclick="recordSpin('Tie')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 sm:py-3.5 rounded-xl border-t border-white/20 shadow-[0_4px_0_rgb(4,120,87)] active:shadow-[0_0px_0_rgb(4,120,87)] active:translate-y-[4px] transition-all text-sm sm:text-base tracking-widest ${tHighlight}">TIE (PUSH)</button>
-            </div>
-
-        </div>
-    `;
-    
-    container.innerHTML = html;
+        `;
+    }
 };
 
 const renderSequenceTracker = (state) => {
     const container = document.getElementById('sequence_container');
     container.innerHTML = '';
     const pill = document.createElement('div');
+    
     let badgeColor = 'bg-slate-600 text-white';
     let pillText = 'WAITING...';
 
-    if (state.next_color === 'Player') { badgeColor = 'bg-blue-600 text-white'; pillText = 'TARGET: P'; }
-    else if (state.next_color === 'Banker') { badgeColor = 'bg-red-600 text-white'; pillText = 'TARGET: B'; }
+    if (state.next_color === 'Player' || state.next_color === 'Even' || state.next_color === 'Low') { 
+        badgeColor = 'bg-blue-600 text-white'; pillText = `TARGET: ${state.next_color.toUpperCase()}`; 
+    }
+    else if (state.next_color === 'Banker' || state.next_color === 'Red' || state.next_color === 'High') { 
+        badgeColor = 'bg-red-600 text-white'; pillText = `TARGET: ${state.next_color.toUpperCase()}`; 
+    }
+    else if (state.next_color === 'Odd' || state.next_color === 'Black') { 
+        badgeColor = 'bg-slate-800 text-white'; pillText = `TARGET: ${state.next_color.toUpperCase()}`; 
+    }
     
     pill.className = `w-auto px-1.5 h-4 sm:h-5 flex-shrink-0 rounded-full border flex items-center justify-center text-[8px] sm:text-[9px] font-bold tracking-wider transition-all duration-300 ${badgeColor} animate-intense-pulse z-20 opacity-100`;
     pill.innerText = pillText;
@@ -122,9 +158,17 @@ const renderSequenceTracker = (state) => {
 };
 
 const updateTargetIndicator = (indicator, desc, targetType) => {
-    if (targetType === "Player") { indicator.className = "w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white text-base bg-blue-600 shadow-md shadow-blue-900/40"; indicator.innerText = "P"; if(desc) desc.innerText = "on Player"; }
-    else if (targetType === "Banker") { indicator.className = "w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white text-base bg-red-600 shadow-md shadow-red-900/40"; indicator.innerText = "B"; if(desc) desc.innerText = "on Banker"; }
-    else if (targetType === "Wait") { indicator.className = "w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white text-base bg-slate-600 shadow-md shadow-slate-900/40"; indicator.innerText = "W"; if(desc) desc.innerText = "Waiting for Result"; }
+    indicator.className = "w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white text-base shadow-md";
+    
+    if (targetType === "Player") { indicator.classList.add("bg-blue-600", "shadow-blue-900/40"); indicator.innerText = "P"; if(desc) desc.innerText = "on Player"; }
+    else if (targetType === "Banker") { indicator.classList.add("bg-red-600", "shadow-red-900/40"); indicator.innerText = "B"; if(desc) desc.innerText = "on Banker"; }
+    else if (targetType === "Red") { indicator.classList.add("bg-red-600", "shadow-red-900/40"); indicator.innerText = "R"; if(desc) desc.innerText = "on Red"; }
+    else if (targetType === "Black") { indicator.classList.add("bg-slate-800", "shadow-slate-900/40"); indicator.innerText = "Bk"; if(desc) desc.innerText = "on Black"; }
+    else if (targetType === "Even") { indicator.classList.add("bg-blue-600", "shadow-blue-900/40"); indicator.innerText = "E"; if(desc) desc.innerText = "on Even"; }
+    else if (targetType === "Odd") { indicator.classList.add("bg-slate-800", "shadow-slate-900/40"); indicator.innerText = "O"; if(desc) desc.innerText = "on Odd"; }
+    else if (targetType === "High") { indicator.classList.add("bg-red-600", "shadow-red-900/40"); indicator.innerText = "H"; if(desc) desc.innerText = "on High (19-36)"; }
+    else if (targetType === "Low") { indicator.classList.add("bg-blue-600", "shadow-blue-900/40"); indicator.innerText = "L"; if(desc) desc.innerText = "on Low (1-18)"; }
+    else { indicator.classList.add("bg-slate-600", "shadow-slate-900/40"); indicator.innerText = "W"; if(desc) desc.innerText = "Waiting for Result"; }
 };
 
 const updatePopupHUD = (state) => {
@@ -150,7 +194,7 @@ const updatePopupHUD = (state) => {
     if (lastRealSpin) {
         if (lastRealSpin.outcome === "Win") {
             popupCard.className = "bg-emerald-950/95 border border-emerald-500/80 rounded-2xl p-3 shadow-2xl shadow-emerald-500/10 relative overflow-hidden backdrop-blur-md transition-all duration-300";
-            if (glowCircle) glowCircle.className = "absolute -right-6 -top-6 w-20 h-24 bg-emerald-400/20 rounded-full blur-xl";
+            if (glowCircle) glowCircle.className = "absolute -right-6 -top-6 w-20 h-24 bg-teal-500/10 rounded-full blur-xl";
             document.querySelector('#next_play_popup svg').setAttribute('stroke', '#a7f3d0'); 
         } else {
             popupCard.className = "bg-rose-950/95 border border-rose-500/80 rounded-2xl p-3 shadow-2xl shadow-rose-500/10 relative overflow-hidden backdrop-blur-md transition-all duration-300";
@@ -187,8 +231,8 @@ const updatePopupHUD = (state) => {
     if (state.next_color === "Wait") {
         if (nextWinValEl) nextWinValEl.innerHTML = formatDisplay(state.bankroll, 'small', true);
     } else {
-        let potentialProfit = state.next_bet;
-        if(state.next_color === "Banker") potentialProfit = state.next_bet * 0.95;
+        let multiplier = (state.game_type === 'baccarat' && state.next_color === "Banker") ? 0.95 : 1.0;
+        let potentialProfit = state.next_bet * multiplier;
         if (nextWinValEl) nextWinValEl.innerHTML = formatDisplay((state.bankroll + potentialProfit), 'small', true);
     }
 
@@ -206,15 +250,34 @@ const updateUI = (state) => {
 
     const progSel = document.getElementById('progression_selector');
     if (progSel && state.progression) progSel.value = state.progression;
+    const gameSel = document.getElementById('game_selector');
+    if (gameSel && state.game_type) gameSel.value = state.game_type;
     
     const seqInput = document.getElementById('custom_sequence_input');
     const seqLabel = document.getElementById('seq_label');
     
-    seqInput.classList.remove('w-16', 'w-24', 'w-32', 'text-slate-500', 'text-teal-400', 'text-amber-400');
-    if (state.progression === 'labouchere') {
-        seqLabel.innerText = "LAB";
-        seqInput.value = state.labouchere_seq.join(' - ');
-        seqInput.classList.add('w-32', 'text-teal-400');
+    seqInput.classList.remove('w-16', 'w-20', 'w-24', 'w-28', 'w-32', 'w-40', 'text-slate-500', 'text-teal-400', 'text-amber-400', 'text-fuchsia-400');
+    
+    if (state.game_type === 'roulette') {
+        seqLabel.innerText = "RAF";
+        let dir = state.rafael_dir === 'L2R' ? 'L▶R' : 'R◀L';
+        let step = state.rafael_idx + 1;
+        let progText = "";
+        
+        if (state.progression === 'star2') {
+            progText = state.is_parlay ? " | PARLAY!" : ` | STG ${state.star_step_idx + 1}`;
+        }
+        seqInput.value = `${dir} [${step}]${progText}`;
+        seqInput.classList.add('w-40', 'text-fuchsia-400');
+        
+    } else if (state.progression === 'star2') {
+        seqLabel.innerText = "STAR";
+        seqInput.value = state.is_parlay ? "PARLAY!" : `STG ${state.star_step_idx + 1}`;
+        if (state.is_parlay) {
+            seqInput.classList.add('w-24', 'text-emerald-400');
+        } else {
+            seqInput.classList.add('w-20', 'text-teal-400');
+        }
     } else if (state.progression === '3step_ladder') {
         seqLabel.innerText = "LADR";
         seqInput.value = `LVL ${state.ladder_level} - ST ${state.ladder_step}`;
@@ -233,7 +296,6 @@ const updateUI = (state) => {
     else if (state.net_pnl < 0) netPlElement.className = "text-lg sm:text-xl font-bold text-rose-500 transition-colors";
     else netPlElement.className = "text-lg sm:text-xl font-bold text-slate-400 transition-colors";
 
-    // --- Calculate Start, High, and Low amounts ---
     let startBankroll = 75.0; 
     let maxBankroll = startBankroll;
     let minBankroll = startBankroll;
@@ -258,7 +320,6 @@ const updateUI = (state) => {
     if (startEl) startEl.innerHTML = formatDisplay(startBankroll, 'small', true);
     if (highEl) highEl.innerHTML = formatDisplay(maxBankroll, 'small', true); 
     if (lowEl) lowEl.innerHTML = formatDisplay(minBankroll, 'small', true);
-    // ------------------------------------------------
 
     const lastSpunNumber = state.history.length > 0 ? state.history[0].spun_number : null;
     renderNumberGrid(lastSpunNumber, state);
@@ -356,6 +417,12 @@ const updateUI = (state) => {
         let targetCell = "";
         if (spin.bet_on === "Player") targetCell = `<span class="text-blue-500 font-bold text-xs">🔵 P</span>`;
         else if (spin.bet_on === "Banker") targetCell = `<span class="text-red-500 font-bold text-xs">🔴 B</span>`;
+        else if (spin.bet_on === "Red") targetCell = `<span class="text-red-500 font-bold text-xs">🔴 RED</span>`;
+        else if (spin.bet_on === "Black") targetCell = `<span class="text-slate-300 font-bold text-xs">⚫ BLK</span>`;
+        else if (spin.bet_on === "Even") targetCell = `<span class="text-blue-400 font-bold text-xs">🔵 EVN</span>`;
+        else if (spin.bet_on === "Odd") targetCell = `<span class="text-slate-300 font-bold text-xs">⚪ ODD</span>`;
+        else if (spin.bet_on === "High") targetCell = `<span class="text-amber-400 font-bold text-xs">🟡 HI</span>`;
+        else if (spin.bet_on === "Low") targetCell = `<span class="text-sky-400 font-bold text-xs">🔵 LO</span>`;
         else if (spin.bet_on === "Wait") targetCell = `<span class="text-slate-400 font-bold text-xs">👀 W</span>`;
             
         let spunColorClass = "text-emerald-400 bg-emerald-950/40 border-emerald-900/50"; 
@@ -366,19 +433,26 @@ const updateUI = (state) => {
             spunColorClass = "text-red-400 bg-red-950/40 border-red-900/50";
         } else if (spin.spun_trait === 'Tie') {
             spunColorClass = "text-emerald-400 bg-emerald-950/40 border-emerald-900/50";
-        }
-
-        let exactScore = "";
-        if (typeof spin.spun_number === 'string' && spin.spun_number.includes('_')) {
-            exactScore = spin.spun_number.split('_').pop();
+        } else if (spin.spun_trait === 'Roulette') {
+            if(spin.spun_color === 'Red') spunColorClass = "text-white bg-red-600 border-red-500";
+            else if(spin.spun_color === 'Black') spunColorClass = "text-white bg-slate-800 border-slate-700";
+            else spunColorClass = "text-white bg-emerald-600 border-emerald-500";
         }
 
         let displayColorText = spin.spun_color; 
-        if (spin.spun_trait === 'Player') displayColorText = `P ${exactScore ? '['+exactScore+']' : ''}`;
-        else if (spin.spun_trait === 'Banker') displayColorText = `B ${exactScore ? '['+exactScore+']' : ''}`;
-        else if (spin.spun_trait === 'Tie') displayColorText = `T`;
+        if (spin.spun_trait === 'Player') {
+            let s = spin.spun_number.split('_').pop();
+            displayColorText = `P [${s}]`;
+        } else if (spin.spun_trait === 'Banker') {
+            let s = spin.spun_number.split('_').pop();
+            displayColorText = `B [${s}]`;
+        } else if (spin.spun_trait === 'Tie') {
+            displayColorText = `T`;
+        } else if (spin.spun_trait === 'Roulette') {
+            displayColorText = spin.spun_number;
+        }
 
-        const spunNumberCell = `<span class="font-black text-[10px] px-1.5 py-0.5 rounded border whitespace-nowrap ${spunColorClass}">${displayColorText}</span>`;
+        const spunNumberCell = `<span class="font-black text-[10px] px-2 py-0.5 rounded border whitespace-nowrap ${spunColorClass}">${displayColorText}</span>`;
         
         let outcomeBadge = "";
         let rowBgClass = "hover:bg-slate-900/40"; 
@@ -424,28 +498,36 @@ const updateUI = (state) => {
     logBody.innerHTML = logRows;
 };
 
-const changeProgression = async () => {
+const changeAppState = async () => {
     const newProg = document.getElementById('progression_selector').value;
-    if (currentState && currentState.progression === newProg) return;
+    const newGame = document.getElementById('game_selector').value;
+    
+    if (currentState && currentState.progression === newProg && currentState.game_type === newGame) return;
     
     try {
         popupDismissed = false;
-        const response = await fetch('/change_progression', { 
+        const response = await fetch('/change_state', { 
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ progression: newProg }) 
+            body: JSON.stringify({ progression: newProg, game_type: newGame }) 
         });
         
         if (!response.ok) {
             alert("SERVER ERROR: The server rejected the request. Please make sure you RESTARTED your Python app.");
-            if(currentState) document.getElementById('progression_selector').value = currentState.progression;
+            if(currentState) {
+                document.getElementById('progression_selector').value = currentState.progression;
+                document.getElementById('game_selector').value = currentState.game_type;
+            }
             return;
         }
         updateUI(await response.json());
     } catch (err) { 
-        console.error("Error changing progression:", err); 
+        console.error("Error changing state:", err); 
         alert("NETWORK ERROR: Could not reach the server to recalculate.");
-        if(currentState) document.getElementById('progression_selector').value = currentState.progression;
+        if(currentState) {
+            document.getElementById('progression_selector').value = currentState.progression;
+            document.getElementById('game_selector').value = currentState.game_type;
+        }
     }
 };
 
@@ -475,10 +557,11 @@ const resetSession = async () => {
         try {
             popupDismissed = false;
             const currentProg = document.getElementById('progression_selector').value;
+            const currentGame = document.getElementById('game_selector').value;
             const response = await fetch('/reset', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ progression: currentProg })
+                body: JSON.stringify({ progression: currentProg, game_type: currentGame })
             });
             updateUI(await response.json());
         } catch (err) { console.error("Error resetting session:", err); }

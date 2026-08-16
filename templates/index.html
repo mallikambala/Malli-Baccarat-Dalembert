@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Malli's Baccarat - Live Tracker</title>
+    <title>Malli's Casino Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -19,25 +19,32 @@
     <header class="border-b border-slate-800 bg-slate-950/50 backdrop-blur sticky top-0 z-40">
         <div class="w-full mx-auto px-2 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
             <div class="flex items-center">
-                <span class="text-xl sm:text-2xl mr-2">🎴</span>
-                <h1 class="text-base sm:text-lg font-bold tracking-tight bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">MALLI'S BACCARAT</h1>
+                <span class="text-xl sm:text-2xl mr-2">🎰</span>
+                <h1 class="text-base sm:text-lg font-bold tracking-tight bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent hidden sm:block">MALLI'S CASINO TRACKER</h1>
             </div>
             <div class="flex items-center space-x-2 sm:space-x-4">
                 <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 rounded-md sm:rounded-lg px-2 py-1 shadow-inner">
+                    <span class="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider hidden md:block">GAME:</span>
+                    <select id="game_selector" onchange="changeAppState()" class="bg-transparent text-amber-400 text-[10px] sm:text-sm font-bold font-mono outline-none cursor-pointer focus:ring-0 appearance-none">
+                        <option value="baccarat">Baccarat</option>
+                        <option value="roulette" selected>Roulette</option>
+                    </select>
+                </div>
+                <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 rounded-md sm:rounded-lg px-2 py-1 shadow-inner">
                     <span class="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider hidden md:block">SYS:</span>
-                    <select id="progression_selector" onchange="changeProgression()" class="bg-transparent text-teal-400 text-[10px] sm:text-sm font-bold font-mono outline-none cursor-pointer focus:ring-0 appearance-none">
-                        <option value="dalembert" selected>D'Alembert</option>
-                        <option value="labouchere">Labouchere</option>
+                    <select id="progression_selector" onchange="changeAppState()" class="bg-transparent text-teal-400 text-[10px] sm:text-sm font-bold font-mono outline-none cursor-pointer focus:ring-0 appearance-none">
+                        <option value="star2" selected>Star 2.0</option>
+                        <option value="dalembert">D'Alembert</option>
                         <option value="3step_ladder">3-Step Ladder</option>
                     </select>
                 </div>
                 <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 rounded-md sm:rounded-lg px-2 py-1 shadow-inner">
                     <span class="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider hidden sm:block">1 U =</span>
                     <select id="unit_multiplier" onchange="reRenderUI()" class="bg-transparent text-emerald-400 text-[10px] sm:text-sm font-bold font-mono outline-none cursor-pointer focus:ring-0 appearance-none">
-                        <option value="10">₹10</option>
+                        <option value="10" selected>₹10</option>
                         <option value="50">₹50</option>
                         <option value="100">₹100</option>
-                        <option value="200" selected>₹200</option>
+                        <option value="200">₹200</option>
                         <option value="500">₹500</option>
                         <option value="1000">₹1,000</option>
                     </select>
@@ -135,10 +142,8 @@
         
         <div class="lg:col-span-12 xl:col-span-5 space-y-3 sm:space-y-4">
             <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-xl flex flex-col h-full">
-                
                 <div class="flex items-center justify-between mb-3">
                     <h2 class="text-base sm:text-lg font-bold text-slate-200 hidden sm:block">Session Betting Log</h2>
-                    
                     <div class="flex items-center space-x-2 sm:space-x-3 bg-slate-900/50 rounded-lg px-2 sm:px-3 py-1 border border-slate-800/80 mx-auto sm:mx-0">
                         <div class="flex flex-col items-center">
                             <span class="text-[8px] text-slate-500 uppercase tracking-widest font-bold">Start</span>
@@ -155,7 +160,6 @@
                             <span id="lowest_amount" class="text-[10px] sm:text-xs font-mono font-bold text-rose-400">₹0</span>
                         </div>
                     </div>
-
                     <span class="text-[10px] sm:text-xs text-slate-500 hidden sm:block">Live Updates</span>
                 </div>
 
