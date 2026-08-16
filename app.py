@@ -4,7 +4,7 @@ app = Flask(__name__, template_folder='templates', static_folder='static')
 app.secret_key = "mallis_baccarat_super_secret_key"
 
 class CasinoTracker:
-    def __init__(self, start_bankroll=75, base_bet=1, progression="star2", game_type="roulette"):
+    def __init__(self, start_bankroll=75, base_bet=1, progression="3step_ladder", game_type="baccarat"):
         self.start_bankroll = float(start_bankroll)
         self.bankroll = float(start_bankroll)
         self.base_bet = base_bet
@@ -151,7 +151,7 @@ class CasinoTracker:
             spun_color = props['color']
             
             if val == '0':
-                is_win = False # 0 is a hard loss
+                is_win = False
             else:
                 if bet_target in ['Red', 'Black']: is_win = (bet_target == props['color'])
                 elif bet_target in ['Even', 'Odd']: is_win = (bet_target == props['even_odd'])
@@ -184,7 +184,7 @@ class CasinoTracker:
             self.apply_progression_loss(bet_amount)
             
             if self.game_type == "roulette":
-                self.rafael_idx = (self.rafael_idx + 1) % 6 # Zero keeps prediction sequence running
+                self.rafael_idx = (self.rafael_idx + 1) % 6
                     
             self.total_losses += 1
             self.current_loss_streak += 1

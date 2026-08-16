@@ -24,37 +24,6 @@ const formatDisplay = (val, size = 'small', hideUnit = false) => {
     return `${primaryPart}${secondaryPart}`;
 };
 
-const renderRiskRadar = (lossSequence) => {
-    const container = document.getElementById('risk_radar_container');
-    const stepsCount = document.getElementById('risk_steps_count');
-    if (!container || !stepsCount) return;
-
-    if (!lossSequence || lossSequence.length === 0) {
-        stepsCount.innerText = '0 Spins';
-        container.innerHTML = `<div class="text-[10px] text-slate-600 font-medium">Bankroll is safe.</div>`;
-        return;
-    }
-    
-    stepsCount.innerText = `${lossSequence.length} Spin${lossSequence.length > 1 ? 's' : ''}`;
-    let riskHtml = '';
-    
-    lossSequence.forEach((step, idx) => {
-        let badgeColor = 'bg-slate-700 text-white';
-        let text = step.target || '?';
-        
-        riskHtml += `
-            <div class="flex-shrink-0 flex items-center gap-1 bg-rose-950/40 border border-rose-900/50 text-rose-400 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded shadow-sm shadow-rose-900/20">
-                <span class="${badgeColor} px-1 rounded-sm text-[8px] leading-tight">${text}</span>
-                <span>-${formatDisplay(step.bet_amount, 'small', true)}</span>
-            </div>`;
-            
-        if (idx < lossSequence.length - 1) {
-            riskHtml += `<span class="text-slate-600 text-[10px] flex-shrink-0 font-bold">›</span>`;
-        }
-    });
-    container.innerHTML = riskHtml;
-};
-
 const renderNumberGrid = (lastSpunNumber = null, state) => {
     const container = document.getElementById('number_grid_container');
     
@@ -343,16 +312,12 @@ const updateUI = (state) => {
 
     const gridContainer = document.getElementById('number_grid_container');
     const alertBox = document.getElementById('status_alert');
-    const riskRadarSection = document.getElementById('risk_radar_section');
 
     if (state.status === "ACTIVE") {
-        renderRiskRadar(state.predicted_loss_sequence);
         gridContainer.classList.remove('opacity-50', 'pointer-events-none', 'grayscale');
-        riskRadarSection.classList.remove('hidden');
         alertBox.className = "hidden";
     } else {
         gridContainer.classList.add('opacity-50', 'pointer-events-none', 'grayscale');
-        riskRadarSection.classList.add('hidden');
         alertBox.classList.remove('hidden');
 
         if (state.status === "TARGET_REACHED") {
