@@ -14,12 +14,12 @@ class CasinoTracker:
         self.game_type = game_type
         
         # 3-Step Ladder State (19 Levels)
-        self.ladder_bases = [0.2, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8]
+        self.ladder_bases = list((0.2, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8))
         self.ladder_level = 0
         self.ladder_step = 1
 
         # Star 2.0 State (Parlay System)
-        self.star_seq = [1, 1, 1, 2, 2, 5, 5, 10, 10, 20, 20]
+        self.star_seq = list((1, 1, 1, 2, 2, 5, 5, 10, 10, 20, 20))
         self.star_step_idx = 0
         self.is_parlay = False
         self.star_parlay_amount = 0
@@ -35,7 +35,7 @@ class CasinoTracker:
         self.target_bankroll = 85.0      
         self.stop_loss_bankroll = 25.0   
         self.spin_count = 0
-        self.history = []
+        self.history = list()
         
         self.total_wins = 0
         self.total_losses = 0
@@ -46,7 +46,7 @@ class CasinoTracker:
 
     def get_roulette_properties(self, val):
         val = int(val)
-        reds = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]
+        reds = list((1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36))
         if val == 0:
             return {'color': 'Green', 'even_odd': 'Zero', 'high_low': 'Zero'}
         return {
@@ -200,7 +200,7 @@ class CasinoTracker:
         
     def undo_last_spin(self):
         if not self.history: return self.get_state()
-        previous_spins = [spin['spun_number'] for spin in self.history[:-1]]
+        previous_spins = list(spin['spun_number'] for spin in self.history[:-1])
         was_ignored = self.ignore_limits
         current_prog = self.progression
         current_game = self.game_type
@@ -211,7 +211,7 @@ class CasinoTracker:
         return self.get_state()
 
     def change_state(self, new_progression=None, new_game=None):
-        previous_spins = [spin['spun_number'] for spin in self.history]
+        previous_spins = list(spin['spun_number'] for spin in self.history)
         was_ignored = self.ignore_limits
         
         target_prog = new_progression if new_progression else self.progression
@@ -234,20 +234,7 @@ class CasinoTracker:
         return "ACTIVE"
 
     def get_predicted_loss_sequence(self):
-        if self.get_status() != "ACTIVE": return []
-        sim_bankroll = self.bankroll
-        sim_bet = self.current_bet
-        sim_base = self.base_bet
-        loss_sequence = []
-        effective_stop_loss = 0 if self.ignore_limits else self.stop_loss_bankroll
-
-        while sim_bankroll > effective_stop_loss:
-            loss_sequence.append({ "bet_amount": sim_bet, "target": "?" })
-            sim_bankroll -= sim_bet
-            sim_bet += sim_base
-            if len(loss_sequence) > 100: break
-                
-        return loss_sequence
+        return list()
 
     def reset(self, progression=None, game_type=None):
         target_prog = progression if progression else self.progression
@@ -267,7 +254,7 @@ class CasinoTracker:
             "status": self.get_status(), "history": self.history[::-1],
             "total_wins": self.total_wins, "total_losses": self.total_losses,
             "max_win_streak": self.max_win_streak, "max_loss_streak": self.max_loss_streak,
-            "predicted_loss_sequence": []
+            "predicted_loss_sequence": list()
         }
 
 tracker = CasinoTracker()

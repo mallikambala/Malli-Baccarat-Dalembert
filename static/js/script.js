@@ -32,42 +32,46 @@ const renderNumberGrid = (lastSpunNumber = null, state) => {
         const bHighlight = (lastSpunNumber && lastSpunNumber.startsWith('b_')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.01] z-10' : '';
         const tHighlight = (lastSpunNumber === 'Tie') ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-950 scale-[1.02] z-10' : '';
         
-        const genBtns = (prefix, nums, bgClass, shadowColor) => {
-            return nums.map(n => `
-                <button onclick="recordSpin('${prefix}_${n}')" 
-                        class="w-full flex items-center justify-center ${bgClass} text-white font-black py-2.5 sm:py-3 rounded-xl transition-all text-sm sm:text-base border-t border-white/20 shadow-[0_3px_0_${shadowColor}] active:shadow-[0_0px_0_${shadowColor}] active:translate-y-[3px]">
-                    ${n}
-                </button>
-            `).join('');
+        const genGridBtns = (prefix, nums, bgClass, shadowColor, isCenteredRow=false) => {
+            return nums.map((n, i) => {
+                const startClass = (isCenteredRow && i === 0) ? 'col-start-2' : '';
+                return `
+                    <button onclick="recordSpin('${prefix}_${n}')" 
+                            class="col-span-2 ${startClass} w-full flex items-center justify-center ${bgClass} text-white font-black py-2.5 sm:py-3 rounded-xl transition-all text-sm sm:text-base border-t border-white/20 shadow-[0_3px_0_${shadowColor}] active:shadow-[0_0px_0_${shadowColor}] active:translate-y-[3px]">
+                        ${n}
+                    </button>
+                `;
+            }).join('');
         };
 
         container.innerHTML = `
-            <div class="flex flex-col gap-3 sm:gap-4 w-full">
-                <div class="bg-red-900/30 border border-red-800/60 rounded-2xl p-3 sm:p-4 shadow-inner transition-all duration-300 flex flex-col gap-2 sm:gap-3 w-full ${bHighlight}">
-                    <div class="text-red-300 font-black text-[10px] sm:text-xs tracking-widest uppercase text-center drop-shadow-sm mb-1">BANKER</div>
-                    <div class="grid grid-cols-6 gap-1.5 sm:gap-2 w-full">
-                        ${genBtns('b_low', [0,1,2,3,4,5], 'bg-red-800 hover:bg-red-700', 'rgb(69,10,10)')}
-                    </div>
-                    <div class="grid grid-cols-4 gap-1.5 sm:gap-2 w-full mt-1 sm:mt-1.5">
-                        ${genBtns('b_high', [6,7,8,9], 'bg-red-600 hover:bg-red-500', 'rgb(153,27,27)')}
-                    </div>
-                </div>
-                <div class="bg-blue-900/30 border border-blue-800/60 rounded-2xl p-3 sm:p-4 shadow-inner transition-all duration-300 flex flex-col gap-2 sm:gap-3 w-full ${pHighlight}">
-                    <div class="text-blue-300 font-black text-[10px] sm:text-xs tracking-widest uppercase text-center drop-shadow-sm mb-1">PLAYER</div>
-                    <div class="grid grid-cols-6 gap-1.5 sm:gap-2 w-full">
-                        ${genBtns('p_low', [0,1,2,3,4,5], 'bg-blue-800 hover:bg-blue-700', 'rgb(23,37,84)')}
-                    </div>
-                    <div class="grid grid-cols-4 gap-1.5 sm:gap-2 w-full mt-1 sm:mt-1.5">
-                        ${genBtns('p_high', [6,7,8,9], 'bg-blue-600 hover:bg-blue-500', 'rgb(30,58,138)')}
+            <div class="flex flex-col gap-2.5 sm:gap-3 w-full">
+                <!-- BANKER -->
+                <div class="bg-red-900/30 border border-red-800/60 rounded-2xl p-2.5 sm:p-3 shadow-inner transition-all duration-300 flex flex-col gap-1.5 sm:gap-2 w-full ${bHighlight}">
+                    <div class="text-red-300 font-black text-[10px] sm:text-xs tracking-widest uppercase text-center drop-shadow-sm mb-0.5">BANKER</div>
+                    <div class="grid grid-cols-10 gap-1.5 sm:gap-2 w-full">
+                        ${genGridBtns('b_low', Array(1, 2, 3, 4, 5), 'bg-red-800 hover:bg-red-700', 'rgb(69,10,10)')}
+                        ${genGridBtns('b_high', Array(6, 7, 8, 9), 'bg-red-600 hover:bg-red-500', 'rgb(153,27,27)', true)}
                     </div>
                 </div>
-                <div class="w-full mt-1">
-                    <button onclick="recordSpin('Tie')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 sm:py-3.5 rounded-xl border-t border-white/20 shadow-[0_4px_0_rgb(4,120,87)] active:shadow-[0_0px_0_rgb(4,120,87)] active:translate-y-[4px] transition-all text-sm sm:text-base tracking-widest ${tHighlight}">TIE (PUSH)</button>
+
+                <!-- PLAYER -->
+                <div class="bg-blue-900/30 border border-blue-800/60 rounded-2xl p-2.5 sm:p-3 shadow-inner transition-all duration-300 flex flex-col gap-1.5 sm:gap-2 w-full ${pHighlight}">
+                    <div class="text-blue-300 font-black text-[10px] sm:text-xs tracking-widest uppercase text-center drop-shadow-sm mb-0.5">PLAYER</div>
+                    <div class="grid grid-cols-10 gap-1.5 sm:gap-2 w-full">
+                        ${genGridBtns('p_low', Array(1, 2, 3, 4, 5), 'bg-blue-800 hover:bg-blue-700', 'rgb(23,37,84)')}
+                        ${genGridBtns('p_high', Array(6, 7, 8, 9), 'bg-blue-600 hover:bg-blue-500', 'rgb(30,58,138)', true)}
+                    </div>
+                </div>
+
+                <!-- TIE -->
+                <div class="w-full">
+                    <button onclick="recordSpin('Tie')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 sm:py-3 rounded-xl border-t border-white/20 shadow-[0_4px_0_rgb(4,120,87)] active:shadow-[0_0px_0_rgb(4,120,87)] active:translate-y-[4px] transition-all text-sm sm:text-base tracking-widest ${tHighlight}">TIE (PUSH)</button>
                 </div>
             </div>
         `;
     } else if (state.game_type === 'roulette') {
-        const reds = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+        const reds = Array(1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36);
         let buttonsHtml = '';
         
         for (let i = 1; i <= 36; i++) {
@@ -87,13 +91,13 @@ const renderNumberGrid = (lastSpunNumber = null, state) => {
         const zHighlight = (lastSpunNumber == 0) ? 'ring-2 ring-white scale-105 z-10' : '';
         const zeroHtml = `
             <button onclick="recordSpin('0')" 
-                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 sm:py-3.5 mb-2 sm:mb-3 rounded-xl border-t border-white/20 shadow-[0_4px_0_rgb(4,120,87)] active:shadow-[0_0px_0_rgb(4,120,87)] active:translate-y-[4px] transition-all text-sm sm:text-base tracking-widest ${zHighlight}">
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 sm:py-3 mb-2 sm:mb-2.5 rounded-xl border-t border-white/20 shadow-[0_4px_0_rgb(4,120,87)] active:shadow-[0_0px_0_rgb(4,120,87)] active:translate-y-[4px] transition-all text-sm sm:text-base tracking-widest ${zHighlight}">
                 0 (GREEN)
             </button>
         `;
 
         container.innerHTML = `
-            <div class="flex flex-col w-full max-w-sm mx-auto h-[400px] overflow-y-auto custom-scrollbar pr-2">
+            <div class="flex flex-col w-full max-w-sm mx-auto h-[380px] overflow-y-auto custom-scrollbar pr-2">
                 ${zeroHtml}
                 <div class="grid grid-cols-3 gap-1.5 sm:gap-2">
                     ${buttonsHtml}
@@ -103,31 +107,8 @@ const renderNumberGrid = (lastSpunNumber = null, state) => {
     }
 };
 
-const renderSequenceTracker = (state) => {
-    const container = document.getElementById('sequence_container');
-    container.innerHTML = '';
-    const pill = document.createElement('div');
-    
-    let badgeColor = 'bg-slate-600 text-white';
-    let pillText = 'WAITING...';
-
-    if (state.next_color === 'Player' || state.next_color === 'Even' || state.next_color === 'Low') { 
-        badgeColor = 'bg-blue-600 text-white'; pillText = `TARGET: ${state.next_color.toUpperCase()}`; 
-    }
-    else if (state.next_color === 'Banker' || state.next_color === 'Red' || state.next_color === 'High') { 
-        badgeColor = 'bg-red-600 text-white'; pillText = `TARGET: ${state.next_color.toUpperCase()}`; 
-    }
-    else if (state.next_color === 'Odd' || state.next_color === 'Black') { 
-        badgeColor = 'bg-slate-800 text-white'; pillText = `TARGET: ${state.next_color.toUpperCase()}`; 
-    }
-    
-    pill.className = `w-auto px-1.5 h-4 sm:h-5 flex-shrink-0 rounded-full border flex items-center justify-center text-[8px] sm:text-[9px] font-bold tracking-wider transition-all duration-300 ${badgeColor} animate-intense-pulse z-20 opacity-100`;
-    pill.innerText = pillText;
-    container.appendChild(pill);
-};
-
 const updateTargetIndicator = (indicator, desc, targetType) => {
-    indicator.className = "w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white text-base shadow-md";
+    indicator.className = "w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white text-base shadow-md shrink-0";
     
     if (targetType === "Player") { indicator.classList.add("bg-blue-600", "shadow-blue-900/40"); indicator.innerText = "P"; if(desc) desc.innerText = "on Player"; }
     else if (targetType === "Banker") { indicator.classList.add("bg-red-600", "shadow-red-900/40"); indicator.innerText = "B"; if(desc) desc.innerText = "on Banker"; }
@@ -162,16 +143,16 @@ const updatePopupHUD = (state) => {
     
     if (lastRealSpin) {
         if (lastRealSpin.outcome === "Win") {
-            popupCard.className = "bg-emerald-950/95 border border-emerald-500/80 rounded-2xl p-3 shadow-2xl shadow-emerald-500/10 relative overflow-hidden backdrop-blur-md transition-all duration-300";
-            if (glowCircle) glowCircle.className = "absolute -right-6 -top-6 w-20 h-24 bg-teal-500/10 rounded-full blur-xl";
+            popupCard.className = "bg-emerald-950/95 border border-emerald-500/80 rounded-2xl p-3.5 shadow-2xl shadow-emerald-500/10 relative overflow-hidden backdrop-blur-md transition-all duration-300";
+            if (glowCircle) glowCircle.className = "absolute -right-6 -top-6 w-20 h-24 bg-emerald-400/20 rounded-full blur-xl";
             document.querySelector('#next_play_popup svg').setAttribute('stroke', '#a7f3d0'); 
         } else {
-            popupCard.className = "bg-rose-950/95 border border-rose-500/80 rounded-2xl p-3 shadow-2xl shadow-rose-500/10 relative overflow-hidden backdrop-blur-md transition-all duration-300";
+            popupCard.className = "bg-rose-950/95 border border-rose-500/80 rounded-2xl p-3.5 shadow-2xl shadow-rose-500/10 relative overflow-hidden backdrop-blur-md transition-all duration-300";
             if (glowCircle) glowCircle.className = "absolute -right-6 -top-6 w-20 h-24 bg-rose-400/20 rounded-full blur-xl";
             document.querySelector('#next_play_popup svg').setAttribute('stroke', '#fecdd3'); 
         }
     } else {
-        popupCard.className = "bg-slate-950/95 border border-slate-700/80 rounded-2xl p-3 shadow-2xl relative overflow-hidden backdrop-blur-md transition-all duration-300";
+        popupCard.className = "bg-slate-950/95 border border-slate-700/80 rounded-2xl p-3.5 shadow-2xl relative overflow-hidden backdrop-blur-md transition-all duration-300";
         if (glowCircle) glowCircle.className = "absolute -right-6 -top-6 w-20 h-24 bg-teal-500/10 rounded-full blur-xl";
         document.querySelector('#next_play_popup svg').setAttribute('stroke', '#94a3b8'); 
     }
@@ -181,6 +162,8 @@ const updatePopupHUD = (state) => {
 
     const plColorClass = state.net_pnl > 0 ? 'text-emerald-400' : state.net_pnl < 0 ? 'text-rose-400' : 'text-slate-400';
     const plContainer = document.getElementById('popup_mini_pl');
+    
+    // REMOVED THE FLEX JUSTIFY-BETWEEN SPACING
     if (plContainer) plContainer.className = `text-[9px] uppercase font-semibold tracking-wider ${plColorClass}`;
     
     const plValEl = document.getElementById('popup_mini_pl_val');
@@ -196,14 +179,30 @@ const updatePopupHUD = (state) => {
         if (inrTargetEl) inrTargetEl.innerHTML = `${state.next_bet} U`;
     }
 
-    const nextWinValEl = document.getElementById('popup_next_win_val');
-    if (state.next_color === "Wait") {
-        if (nextWinValEl) nextWinValEl.innerHTML = formatDisplay(state.bankroll, 'small', true);
-    } else {
-        let multiplier = (state.game_type === 'baccarat' && state.next_color === "Banker") ? 0.95 : 1.0;
-        let potentialProfit = state.next_bet * multiplier;
-        if (nextWinValEl) nextWinValEl.innerHTML = formatDisplay((state.bankroll + potentialProfit), 'small', true);
+    let streakStr = `<span class="text-slate-500">NONE</span>`;
+    if (state.history && state.history.length > 0) {
+        let latest = state.history[0];
+        let w = latest.runWin || 0;
+        let l = latest.runLoss || 0;
+        let a = latest.runAlt || 0;
+
+        if (a >= 3) {
+            streakStr = `<span class="text-fuchsia-400">ALT x${a}</span>`;
+        } else if (w >= 2) {
+            streakStr = `<span class="text-amber-400">WIN x${w}</span>`;
+        } else if (l >= 2) {
+            streakStr = `<span class="text-rose-400">LOSS x${l}</span>`;
+        } else if (w === 1) {
+            streakStr = `<span class="text-emerald-400">WIN x1</span>`;
+        } else if (l === 1) {
+            streakStr = `<span class="text-rose-400">LOSS x1</span>`;
+        } else if (a === 2) {
+            streakStr = `<span class="text-fuchsia-400">ALT x2</span>`;
+        }
     }
+
+    const streakValEl = document.getElementById('popup_current_streak_val');
+    if (streakValEl) streakValEl.innerHTML = streakStr;
 
     popup.classList.remove('opacity-0', 'translate-y-12', 'pointer-events-none');
 };
@@ -217,45 +216,44 @@ const dismissPopup = () => {
 const updateUI = (state) => {
     currentState = state;
 
+    let maxRunAlt = 0;
+    if (state.history && state.history.length > 0) {
+        let runWin = 0;
+        let runLoss = 0;
+        let runAlt = 0;
+        let lastRealOutcome = null;
+        
+        for (let i = state.history.length - 1; i >= 0; i--) {
+            let s = state.history[i];
+            
+            if (s.outcome === 'Win' || s.outcome === 'Loss') {
+                if (lastRealOutcome === null) {
+                    runAlt = 1;
+                } else if (s.outcome !== lastRealOutcome) {
+                    runAlt++;
+                } else {
+                    runAlt = 1;
+                }
+                lastRealOutcome = s.outcome;
+
+                if (s.outcome === 'Win') {
+                    runWin++; runLoss = 0;
+                } else {
+                    runLoss++; runWin = 0;
+                }
+            }
+            s.runWin = runWin;
+            s.runLoss = runLoss;
+            s.runAlt = runAlt;
+            
+            if (runAlt > maxRunAlt) maxRunAlt = runAlt;
+        }
+    }
+
     const progSel = document.getElementById('progression_selector');
     if (progSel && state.progression) progSel.value = state.progression;
     const gameSel = document.getElementById('game_selector');
     if (gameSel && state.game_type) gameSel.value = state.game_type;
-    
-    const seqInput = document.getElementById('custom_sequence_input');
-    const seqLabel = document.getElementById('seq_label');
-    
-    seqInput.classList.remove('w-16', 'w-20', 'w-24', 'w-28', 'w-32', 'w-40', 'text-slate-500', 'text-teal-400', 'text-amber-400', 'text-fuchsia-400');
-    
-    if (state.game_type === 'roulette') {
-        seqLabel.innerText = "RAF";
-        let dir = state.rafael_dir === 'L2R' ? 'L▶R' : 'R◀L';
-        let step = state.rafael_idx + 1;
-        let progText = "";
-        
-        if (state.progression === 'star2') {
-            progText = state.is_parlay ? " | PARLAY!" : ` | STG ${state.star_step_idx + 1}`;
-        }
-        seqInput.value = `${dir} [${step}]${progText}`;
-        seqInput.classList.add('w-40', 'text-fuchsia-400');
-        
-    } else if (state.progression === 'star2') {
-        seqLabel.innerText = "STAR";
-        seqInput.value = state.is_parlay ? "PARLAY!" : `STG ${state.star_step_idx + 1}`;
-        if (state.is_parlay) {
-            seqInput.classList.add('w-24', 'text-emerald-400');
-        } else {
-            seqInput.classList.add('w-20', 'text-teal-400');
-        }
-    } else if (state.progression === '3step_ladder') {
-        seqLabel.innerText = "LADR";
-        seqInput.value = `LVL ${state.ladder_level} - ST ${state.ladder_step}`;
-        seqInput.classList.add('w-28', 'text-amber-400');
-    } else {
-        seqLabel.innerText = "SEQ";
-        seqInput.value = "DYNAMIC";
-        seqInput.classList.add('w-16', 'text-slate-500');
-    }
 
     document.getElementById('bankroll').innerHTML = formatDisplay(state.bankroll, 'large');
     const netPlElement = document.getElementById('net_pnl');
@@ -305,19 +303,18 @@ const updateUI = (state) => {
     document.getElementById('spin_count').innerText = state.spin_count;
     document.getElementById('total_wins').innerText = state.total_wins;
     document.getElementById('total_losses').innerText = state.total_losses;
+    
     document.getElementById('max_win_streak').innerText = state.max_win_streak;
     document.getElementById('max_loss_streak').innerText = state.max_loss_streak;
+    const maxAltEl = document.getElementById('max_alt_streak');
+    if (maxAltEl) maxAltEl.innerText = maxRunAlt;
 
-    renderSequenceTracker(state);
-
-    const gridContainer = document.getElementById('number_grid_container');
     const alertBox = document.getElementById('status_alert');
-
     if (state.status === "ACTIVE") {
-        gridContainer.classList.remove('opacity-50', 'pointer-events-none', 'grayscale');
+        document.getElementById('number_grid_container').classList.remove('opacity-50', 'pointer-events-none', 'grayscale');
         alertBox.className = "hidden";
     } else {
-        gridContainer.classList.add('opacity-50', 'pointer-events-none', 'grayscale');
+        document.getElementById('number_grid_container').classList.add('opacity-50', 'pointer-events-none', 'grayscale');
         alertBox.classList.remove('hidden');
 
         if (state.status === "TARGET_REACHED") {
@@ -339,40 +336,6 @@ const updateUI = (state) => {
     if (state.history.length === 0) {
         logBody.innerHTML = `<tr><td colspan="7" class="py-10 text-center text-slate-600">No spins recorded.</td></tr>`;
         return;
-    }
-
-    if (state.history && state.history.length > 0) {
-        let runWin = 0;
-        let runLoss = 0;
-        let runAlt = 0;
-        let lastRealOutcome = null;
-        
-        for (let i = state.history.length - 1; i >= 0; i--) {
-            let s = state.history[i];
-            
-            if (s.outcome === 'Win' || s.outcome === 'Loss') {
-                if (lastRealOutcome === null) {
-                    runAlt = 1;
-                } else if (s.outcome !== lastRealOutcome) {
-                    runAlt++;
-                } else {
-                    runAlt = 1;
-                }
-                lastRealOutcome = s.outcome;
-
-                if (s.outcome === 'Win') {
-                    runWin++;
-                    runLoss = 0;
-                } else {
-                    runLoss++;
-                    runWin = 0;
-                }
-            }
-            
-            s.runWin = runWin;
-            s.runLoss = runLoss;
-            s.runAlt = runAlt;
-        }
     }
 
     let logRows = "";
