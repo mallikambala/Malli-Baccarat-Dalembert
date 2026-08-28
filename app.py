@@ -1,6 +1,7 @@
 from flask import Flask, render_template, jsonify, request
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.secret_key = "mallis_baccarat_super_secret_key"
 
 class CasinoTracker:
@@ -27,7 +28,7 @@ class CasinoTracker:
         # Rafael's 6 State
         self.L2R = ['Low', 'Even', 'Red', 'Black', 'Odd', 'High']
         self.R2L = ['High', 'Odd', 'Black', 'Red', 'Even', 'Low']
-        self.rafael_dir = 'R2L' # Starts from right side in the video
+        self.rafael_dir = 'R2L' 
         self.rafael_idx = 0
         
         self.current_num_target = "Wait"

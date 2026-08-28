@@ -160,25 +160,6 @@ const updatePopupHUD = (state) => {
     updateTargetIndicator(indicator, colorDesc, state.next_color);
     document.getElementById('popup_bet_display').innerText = formatDisplay(state.next_bet, 'small', true);
 
-    const plColorClass = state.net_pnl > 0 ? 'text-emerald-400' : state.net_pnl < 0 ? 'text-rose-400' : 'text-slate-400';
-    const plContainer = document.getElementById('popup_mini_pl');
-    
-    // REMOVED THE FLEX JUSTIFY-BETWEEN SPACING
-    if (plContainer) plContainer.className = `text-[9px] uppercase font-semibold tracking-wider ${plColorClass}`;
-    
-    const plValEl = document.getElementById('popup_mini_pl_val');
-    if (plValEl) plValEl.innerHTML = (state.net_pnl >= 0 ? '+' : '') + formatDisplay(state.net_pnl, 'small', true);
-
-    const targetLabel = document.querySelector('#popup_target_inr span');
-    if(targetLabel) targetLabel.innerText = "Target Unit:";
-    
-    const inrTargetEl = document.getElementById('popup_target_inr_val');
-    if (state.next_color === "Wait") {
-        if (inrTargetEl) inrTargetEl.innerHTML = `0 U`;
-    } else {
-        if (inrTargetEl) inrTargetEl.innerHTML = `${state.next_bet} U`;
-    }
-
     let streakStr = `<span class="text-slate-500">NONE</span>`;
     if (state.history && state.history.length > 0) {
         let latest = state.history[0];
@@ -203,6 +184,31 @@ const updatePopupHUD = (state) => {
 
     const streakValEl = document.getElementById('popup_current_streak_val');
     if (streakValEl) streakValEl.innerHTML = streakStr;
+    
+    // TREND TRACKER IN POPUP (TINY 14px BLOCKS)
+    const popupTrendContainer = document.getElementById('popup_trend_container');
+    if (popupTrendContainer) {
+        if (!state.history || state.history.length === 0) {
+            popupTrendContainer.innerHTML = `<span class="text-[8px] text-slate-600 font-mono italic">None</span>`;
+        } else {
+            // Slice last 30, reverse so oldest is top-left
+            let recentSpins = state.history.slice(0, 30).reverse();
+            let trendHtml = '';
+            
+            recentSpins.forEach(s => {
+                if (s.outcome === 'Win') {
+                    trendHtml += `<div class="w-[14px] h-[14px] rounded-[2px] bg-emerald-950/80 border border-emerald-500/50 text-emerald-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none shrink-0">W</div>`;
+                } else if (s.outcome === 'Loss') {
+                    trendHtml += `<div class="w-[14px] h-[14px] rounded-[2px] bg-rose-950/80 border border-rose-500/50 text-rose-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none shrink-0">L</div>`;
+                } else {
+                    let ltr = s.outcome === 'Push' ? 'T' : 'O'; 
+                    trendHtml += `<div class="w-[14px] h-[14px] rounded-[2px] bg-slate-800 border border-slate-600 text-slate-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none shrink-0">${ltr}</div>`;
+                }
+            });
+            
+            popupTrendContainer.innerHTML = trendHtml;
+        }
+    }
 
     popup.classList.remove('opacity-0', 'translate-y-12', 'pointer-events-none');
 };
@@ -339,7 +345,10 @@ const updateUI = (state) => {
     }
 
     let logRows = "";
-    state.history.forEach(spin => {
+    // --- SLICE(0, 30): Restrict the Table to the last 30 spins ---
+    let tableHistory = state.history.slice(0, 30);
+    
+    tableHistory.forEach(spin => {
         const pnlClass = spin.outcome === "Win" ? "text-emerald-400 font-semibold" : spin.outcome === "Loss" ? "text-rose-500" : "text-slate-400";
         
         let targetCell = "";
