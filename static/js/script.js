@@ -45,7 +45,7 @@ const renderNumberGrid = (lastSpunNumber = null, state) => {
         };
 
         container.innerHTML = `
-            <div class="flex flex-col gap-2.5 sm:gap-3 w-full">
+            <div class="flex flex-col gap-2.5 sm:gap-3 w-full h-full">
                 <!-- BANKER -->
                 <div class="bg-red-900/30 border border-red-800/60 rounded-2xl p-2.5 sm:p-3 shadow-inner transition-all duration-300 flex flex-col gap-1.5 sm:gap-2 w-full ${bHighlight}">
                     <div class="text-red-300 font-black text-[10px] sm:text-xs tracking-widest uppercase text-center drop-shadow-sm mb-0.5">BANKER</div>
@@ -64,9 +64,14 @@ const renderNumberGrid = (lastSpunNumber = null, state) => {
                     </div>
                 </div>
 
-                <!-- TIE -->
-                <div class="w-full">
+                <!-- TIE & UNDO -->
+                <div class="grid grid-cols-2 gap-1.5 sm:gap-2 mt-auto">
                     <button onclick="recordSpin('Tie')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 sm:py-3 rounded-xl border-t border-white/20 shadow-[0_4px_0_rgb(4,120,87)] active:shadow-[0_0px_0_rgb(4,120,87)] active:translate-y-[4px] transition-all text-sm sm:text-base tracking-widest ${tHighlight}">TIE (PUSH)</button>
+                    
+                    <button id="undo_btn_dynamic" onclick="undoSpin()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-black py-2.5 sm:py-3 rounded-xl border-t border-white/10 shadow-[0_4px_0_rgb(15,23,42)] active:shadow-[0_0px_0_rgb(15,23,42)] active:translate-y-[4px] transition-all text-sm sm:text-base tracking-widest flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>
+                        UNDO
+                    </button>
                 </div>
             </div>
         `;
@@ -89,16 +94,24 @@ const renderNumberGrid = (lastSpunNumber = null, state) => {
         }
 
         const zHighlight = (lastSpunNumber == 0) ? 'ring-2 ring-white scale-105 z-10' : '';
-        const zeroHtml = `
-            <button onclick="recordSpin('0')" 
-                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 sm:py-3 mb-2 sm:mb-2.5 rounded-xl border-t border-white/20 shadow-[0_4px_0_rgb(4,120,87)] active:shadow-[0_0px_0_rgb(4,120,87)] active:translate-y-[4px] transition-all text-sm sm:text-base tracking-widest ${zHighlight}">
-                0 (GREEN)
-            </button>
+        
+        const zeroAndUndoHtml = `
+            <div class="grid grid-cols-2 gap-1.5 sm:gap-2 mb-2 sm:mb-2.5 mt-auto">
+                <button onclick="recordSpin('0')" 
+                        class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 sm:py-3 rounded-xl border-t border-white/20 shadow-[0_4px_0_rgb(4,120,87)] active:shadow-[0_0px_0_rgb(4,120,87)] active:translate-y-[4px] transition-all text-sm sm:text-base tracking-widest ${zHighlight}">
+                    0 (GRN)
+                </button>
+                <button id="undo_btn_dynamic" onclick="undoSpin()" 
+                        class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-black py-2.5 sm:py-3 rounded-xl border-t border-white/10 shadow-[0_4px_0_rgb(15,23,42)] active:shadow-[0_0px_0_rgb(15,23,42)] active:translate-y-[4px] transition-all text-sm sm:text-base tracking-widest flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>
+                    UNDO
+                </button>
+            </div>
         `;
 
         container.innerHTML = `
             <div class="flex flex-col w-full max-w-sm mx-auto h-[380px] overflow-y-auto custom-scrollbar pr-2">
-                ${zeroHtml}
+                ${zeroAndUndoHtml}
                 <div class="grid grid-cols-3 gap-1.5 sm:gap-2">
                     ${buttonsHtml}
                 </div>
@@ -160,6 +173,13 @@ const updatePopupHUD = (state) => {
     updateTargetIndicator(indicator, colorDesc, state.next_color);
     document.getElementById('popup_bet_display').innerText = formatDisplay(state.next_bet, 'small', true);
 
+    const inrTargetEl = document.getElementById('popup_target_inr_val');
+    if (state.next_color === "Wait") {
+        if (inrTargetEl) inrTargetEl.innerHTML = `0 U`;
+    } else {
+        if (inrTargetEl) inrTargetEl.innerHTML = `${state.next_bet} U`;
+    }
+
     let streakStr = `<span class="text-slate-500">NONE</span>`;
     if (state.history && state.history.length > 0) {
         let latest = state.history[0];
@@ -185,28 +205,30 @@ const updatePopupHUD = (state) => {
     const streakValEl = document.getElementById('popup_current_streak_val');
     if (streakValEl) streakValEl.innerHTML = streakStr;
     
-    // TREND TRACKER IN POPUP (TINY 14px BLOCKS)
     const popupTrendContainer = document.getElementById('popup_trend_container');
     if (popupTrendContainer) {
         if (!state.history || state.history.length === 0) {
             popupTrendContainer.innerHTML = `<span class="text-[8px] text-slate-600 font-mono italic">None</span>`;
         } else {
-            // Slice last 30, reverse so oldest is top-left
-            let recentSpins = state.history.slice(0, 30).reverse();
-            let trendHtml = '';
+            // FILTER ONLY W/L for the popup box
+            let wlSpins = state.history.filter(s => s.outcome === 'Win' || s.outcome === 'Loss');
             
-            recentSpins.forEach(s => {
-                if (s.outcome === 'Win') {
-                    trendHtml += `<div class="w-[14px] h-[14px] rounded-[2px] bg-emerald-950/80 border border-emerald-500/50 text-emerald-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none shrink-0">W</div>`;
-                } else if (s.outcome === 'Loss') {
-                    trendHtml += `<div class="w-[14px] h-[14px] rounded-[2px] bg-rose-950/80 border border-rose-500/50 text-rose-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none shrink-0">L</div>`;
-                } else {
-                    let ltr = s.outcome === 'Push' ? 'T' : 'O'; 
-                    trendHtml += `<div class="w-[14px] h-[14px] rounded-[2px] bg-slate-800 border border-slate-600 text-slate-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none shrink-0">${ltr}</div>`;
-                }
-            });
-            
-            popupTrendContainer.innerHTML = trendHtml;
+            if (wlSpins.length === 0) {
+                popupTrendContainer.innerHTML = `<span class="text-[8px] text-slate-600 font-mono italic">None</span>`;
+            } else {
+                let recentSpins = wlSpins.slice(0, 30).reverse();
+                let trendHtml = '';
+                
+                recentSpins.forEach(s => {
+                    if (s.outcome === 'Win') {
+                        trendHtml += `<div class="w-[14px] h-[14px] rounded-[2px] bg-emerald-950/80 border border-emerald-500/50 text-emerald-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none shrink-0">W</div>`;
+                    } else if (s.outcome === 'Loss') {
+                        trendHtml += `<div class="w-[14px] h-[14px] rounded-[2px] bg-rose-950/80 border border-rose-500/50 text-rose-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none shrink-0">L</div>`;
+                    }
+                });
+                
+                popupTrendContainer.innerHTML = trendHtml;
+            }
         }
     }
 
@@ -297,15 +319,8 @@ const updateUI = (state) => {
     const lastSpunNumber = state.history.length > 0 ? state.history[0].spun_number : null;
     renderNumberGrid(lastSpunNumber, state);
 
-    const undoBtn = document.getElementById('undo_btn');
-    if (state.history.length === 0) {
-        undoBtn.disabled = true;
-        undoBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    } else {
-        undoBtn.disabled = false;
-        undoBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-    }
-
+    // Dynamic UNDO buttons are now handled by renderNumberGrid
+    
     document.getElementById('spin_count').innerText = state.spin_count;
     document.getElementById('total_wins').innerText = state.total_wins;
     document.getElementById('total_losses').innerText = state.total_losses;
@@ -345,7 +360,6 @@ const updateUI = (state) => {
     }
 
     let logRows = "";
-    // --- SLICE(0, 30): Restrict the Table to the last 30 spins ---
     let tableHistory = state.history.slice(0, 30);
     
     tableHistory.forEach(spin => {
@@ -427,7 +441,7 @@ const updateUI = (state) => {
                 <td class="py-1.5 px-2 font-mono font-medium text-slate-200 text-[10px] sm:text-xs">${formatDisplay(spin.bet_amount, 'small', true)}</td>
                 <td class="py-1.5 px-2 text-center">${spunNumberCell}</td>
                 <td class="py-1.5 px-2 text-center">${outcomeBadge}</td>
-                <td class="py-1.5 px-2 text-right font-mono ${pnlClass} text-[10px] sm:text-xs">${spin.pnl >= 0 ? '+' : ''}${formatDisplay(spin.pnl, 'small', true)}</td>
+                <td class="py-1.5 px-2 text-right font-mono ${pnlClass} text-[10px] sm:text-xs">${formatDisplay(spin.pnl, 'small', true)}</td>
                 <td class="py-1.5 px-2 text-right font-mono font-bold text-white text-[10px] sm:text-xs">${formatDisplay(spin.bankroll, 'small', true)}</td>
             </tr>
         `;
