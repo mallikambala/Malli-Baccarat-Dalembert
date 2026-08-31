@@ -46,7 +46,6 @@ const renderNumberGrid = (lastSpunNumber = null, state) => {
 
         container.innerHTML = `
             <div class="flex flex-col gap-2.5 sm:gap-3 w-full h-full">
-                <!-- BANKER -->
                 <div class="bg-red-900/30 border border-red-800/60 rounded-2xl p-2.5 sm:p-3 shadow-inner transition-all duration-300 flex flex-col gap-1.5 sm:gap-2 w-full ${bHighlight}">
                     <div class="text-red-300 font-black text-[10px] sm:text-xs tracking-widest uppercase text-center drop-shadow-sm mb-0.5">BANKER</div>
                     <div class="grid grid-cols-10 gap-1.5 sm:gap-2 w-full">
@@ -55,7 +54,6 @@ const renderNumberGrid = (lastSpunNumber = null, state) => {
                     </div>
                 </div>
 
-                <!-- PLAYER -->
                 <div class="bg-blue-900/30 border border-blue-800/60 rounded-2xl p-2.5 sm:p-3 shadow-inner transition-all duration-300 flex flex-col gap-1.5 sm:gap-2 w-full ${pHighlight}">
                     <div class="text-blue-300 font-black text-[10px] sm:text-xs tracking-widest uppercase text-center drop-shadow-sm mb-0.5">PLAYER</div>
                     <div class="grid grid-cols-10 gap-1.5 sm:gap-2 w-full">
@@ -64,7 +62,6 @@ const renderNumberGrid = (lastSpunNumber = null, state) => {
                     </div>
                 </div>
 
-                <!-- TIE & UNDO -->
                 <div class="grid grid-cols-2 gap-1.5 sm:gap-2 mt-auto">
                     <button onclick="recordSpin('Tie')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 sm:py-3 rounded-xl border-t border-white/20 shadow-[0_4px_0_rgb(4,120,87)] active:shadow-[0_0px_0_rgb(4,120,87)] active:translate-y-[4px] transition-all text-sm sm:text-base tracking-widest ${tHighlight}">TIE (PUSH)</button>
                     
@@ -173,14 +170,7 @@ const updatePopupHUD = (state) => {
     updateTargetIndicator(indicator, colorDesc, state.next_color);
     document.getElementById('popup_bet_display').innerText = formatDisplay(state.next_bet, 'small', true);
 
-    const inrTargetEl = document.getElementById('popup_target_inr_val');
-    if (state.next_color === "Wait") {
-        if (inrTargetEl) inrTargetEl.innerHTML = `0 U`;
-    } else {
-        if (inrTargetEl) inrTargetEl.innerHTML = `${state.next_bet} U`;
-    }
-
-    let streakStr = `<span class="text-slate-500">NONE</span>`;
+    let streakStr = `<span class="text-slate-500 font-medium">NONE</span>`;
     if (state.history && state.history.length > 0) {
         let latest = state.history[0];
         let w = latest.runWin || 0;
@@ -210,7 +200,6 @@ const updatePopupHUD = (state) => {
         if (!state.history || state.history.length === 0) {
             popupTrendContainer.innerHTML = `<span class="text-[8px] text-slate-600 font-mono italic">None</span>`;
         } else {
-            // FILTER ONLY W/L for the popup box
             let wlSpins = state.history.filter(s => s.outcome === 'Win' || s.outcome === 'Loss');
             
             if (wlSpins.length === 0) {
@@ -239,6 +228,46 @@ const dismissPopup = () => {
     popupDismissed = true;
     const popup = document.getElementById('next_play_popup');
     if(popup) popup.classList.add('opacity-0', 'translate-y-12', 'pointer-events-none');
+};
+
+// COLUMN HIDE/SHOW LOGIC
+window.toggleColumnMenu = () => {
+    document.getElementById('column_menu').classList.toggle('hidden');
+};
+
+document.addEventListener('click', (e) => {
+    const menu = document.getElementById('column_menu');
+    const btn = document.getElementById('column_menu_btn');
+    if (menu && !menu.classList.contains('hidden') && !menu.contains(e.target) && btn && !btn.contains(e.target)) {
+        menu.classList.add('hidden');
+    }
+});
+
+const initColumns = () => {
+    const table = document.getElementById('log_table');
+    if(!table) return;
+    
+    const savedPrefs = JSON.parse(localStorage.getItem('columnPrefs')) || {
+        'spin': true, 'bet-on': true, 'stake': true, 'result': true, 'status': true, 'spin-pnl': true, 'bankroll': true
+    };
+
+    document.querySelectorAll('.col-toggle').forEach(chk => {
+        const col = chk.value;
+        chk.checked = savedPrefs[col] !== false;
+        if (!chk.checked) table.classList.add('hide-col-' + col);
+        else table.classList.remove('hide-col-' + col);
+        
+        chk.addEventListener('change', (e) => {
+            if(e.target.checked) {
+                table.classList.remove('hide-col-' + col);
+                savedPrefs[col] = true;
+            } else {
+                table.classList.add('hide-col-' + col);
+                savedPrefs[col] = false;
+            }
+            localStorage.setItem('columnPrefs', JSON.stringify(savedPrefs));
+        });
+    });
 };
 
 const updateUI = (state) => {
@@ -319,8 +348,17 @@ const updateUI = (state) => {
     const lastSpunNumber = state.history.length > 0 ? state.history[0].spun_number : null;
     renderNumberGrid(lastSpunNumber, state);
 
-    // Dynamic UNDO buttons are now handled by renderNumberGrid
-    
+    const undoBtn = document.getElementById('undo_btn_dynamic');
+    if (undoBtn) {
+        if (state.history.length === 0) {
+            undoBtn.disabled = true;
+            undoBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            undoBtn.disabled = false;
+            undoBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
     document.getElementById('spin_count').innerText = state.spin_count;
     document.getElementById('total_wins').innerText = state.total_wins;
     document.getElementById('total_losses').innerText = state.total_losses;
@@ -434,15 +472,16 @@ const updateUI = (state) => {
             outcomeBadge = `<span class="bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider font-mono">Push</span>`;
         }
 
+        // ADDED CLASSES FOR DYNAMIC HIDING
         logRows += `
             <tr class="${rowBgClass} transition-colors">
-                <td class="py-1.5 px-2 text-slate-400 font-mono font-medium text-[10px] sm:text-[11px]">${spin.spin}</td>
-                <td class="py-1.5 px-2">${targetCell}</td>
-                <td class="py-1.5 px-2 font-mono font-medium text-slate-200 text-[10px] sm:text-xs">${formatDisplay(spin.bet_amount, 'small', true)}</td>
-                <td class="py-1.5 px-2 text-center">${spunNumberCell}</td>
-                <td class="py-1.5 px-2 text-center">${outcomeBadge}</td>
-                <td class="py-1.5 px-2 text-right font-mono ${pnlClass} text-[10px] sm:text-xs">${formatDisplay(spin.pnl, 'small', true)}</td>
-                <td class="py-1.5 px-2 text-right font-mono font-bold text-white text-[10px] sm:text-xs">${formatDisplay(spin.bankroll, 'small', true)}</td>
+                <td class="py-1.5 px-2 text-slate-400 font-mono font-medium text-[10px] sm:text-[11px] col-spin">${spin.spin}</td>
+                <td class="py-1.5 px-2 col-bet-on">${targetCell}</td>
+                <td class="py-1.5 px-2 font-mono font-medium text-slate-200 text-[10px] sm:text-xs col-stake">${formatDisplay(spin.bet_amount, 'small', true)}</td>
+                <td class="py-1.5 px-2 text-center col-result">${spunNumberCell}</td>
+                <td class="py-1.5 px-2 text-center col-status">${outcomeBadge}</td>
+                <td class="py-1.5 px-2 text-right font-mono ${pnlClass} text-[10px] sm:text-xs col-spin-pnl">${formatDisplay(spin.pnl, 'small', true)}</td>
+                <td class="py-1.5 px-2 text-right font-mono font-bold text-white text-[10px] sm:text-xs col-bankroll">${formatDisplay(spin.bankroll, 'small', true)}</td>
             </tr>
         `;
     });
@@ -523,5 +562,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     try {
         const response = await fetch('/state');
         updateUI(await response.json());
+        initColumns(); // Initialize Column Toggle Checkboxes
     } catch (err) { console.error("Error pulling initial state:", err); }
 });
