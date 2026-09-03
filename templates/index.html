@@ -107,25 +107,28 @@
                         </div>
                     </div>
                 </div>
-                <div class="my-2 border-t border-slate-800/80 relative z-10"></div>
                 
-                <div id="status_alert" class="hidden flex-col space-y-2 rounded-xl p-2 border mb-1 transition-all duration-300 relative z-10">
-                    <div class="flex items-center space-x-2">
-                        <span id="status_icon" class="text-lg"></span>
-                        <div>
-                            <h3 id="status_title" class="font-bold text-xs sm:text-sm"></h3>
-                            <p id="status_msg" class="text-[9px] opacity-90 mt-0.5"></p>
+                <div id="status_alert_container" class="hidden">
+                    <div class="my-2 border-t border-slate-800/80 relative z-10"></div>
+                    <div id="status_alert" class="flex flex-col space-y-2 rounded-xl p-2 border mb-1 transition-all duration-300 relative z-10">
+                        <div class="flex items-center space-x-2">
+                            <span id="status_icon" class="text-lg"></span>
+                            <div>
+                                <h3 id="status_title" class="font-bold text-xs sm:text-sm"></h3>
+                                <p id="status_msg" class="text-[9px] opacity-90 mt-0.5"></p>
+                            </div>
                         </div>
+                        <button onclick="continueSession()" class="w-full py-1 bg-slate-900/40 hover:bg-slate-900/80 text-white text-[9px] font-bold tracking-wider uppercase rounded shadow transition-all border border-current opacity-80 hover:opacity-100">Continue Playing</button>
                     </div>
-                    <button onclick="continueSession()" class="w-full py-1 bg-slate-900/40 hover:bg-slate-900/80 text-white text-[9px] font-bold tracking-wider uppercase rounded shadow transition-all border border-current opacity-80 hover:opacity-100">Continue Playing</button>
                 </div>
             </div>
         </div>
         
         <div class="lg:col-span-7 xl:col-span-4 space-y-3 sm:space-y-4">
-            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-xl flex flex-col">
-                <div class="flex items-center justify-between mb-2 sm:mb-3">
-                    <h2 id="grid_title" class="text-xs sm:text-sm font-semibold text-slate-400 uppercase tracking-wider">🎛️ Input Score</h2>
+            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-xl flex flex-col h-full">
+                <div class="flex items-center justify-between mb-2 sm:mb-3 gap-2">
+                    <h2 id="grid_title" class="text-xs sm:text-sm font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap shrink-0">🎛️ Input Score</h2>
+                    <input type="text" id="quick_note" placeholder="Quick note..." class="flex-1 min-w-0 bg-slate-900 border border-slate-700/80 rounded-md px-2 py-1 text-[10px] sm:text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-teal-500/50 transition-colors shadow-inner">
                 </div>
                 <div id="number_grid_container" class="transition-all duration-300 flex flex-col"></div>
             </div>
@@ -138,7 +141,6 @@
                     <div class="flex items-center space-x-2">
                         <h2 class="text-base sm:text-lg font-bold text-slate-200 hidden sm:block">Session Betting Log</h2>
                         
-                        <!-- COLUMN CUSTOMIZER MENU -->
                         <div class="relative">
                             <button id="column_menu_btn" onclick="toggleColumnMenu()" class="text-slate-400 hover:text-white transition-colors p-1 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 shadow-sm" title="Customize Columns">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
@@ -197,29 +199,41 @@
         </div>
     </main>
 
-    <div id="next_play_popup" class="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-50 transform translate-y-12 opacity-0 pointer-events-none transition-all duration-500 ease-out max-w-[18rem] w-full">
-        <div class="bg-slate-950/95 border border-slate-700/80 rounded-2xl p-3.5 shadow-2xl relative overflow-hidden backdrop-blur-md">
+    <!-- FLOATING POPUP: Stripped margins/paddings to compress vertically -->
+    <div id="next_play_popup" class="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-50 transform translate-y-12 opacity-0 pointer-events-none transition-all duration-500 ease-out max-w-[16rem] w-full">
+        <div class="bg-slate-950/95 border border-slate-700/80 rounded-xl p-2.5 shadow-2xl relative overflow-hidden backdrop-blur-md">
             <div class="absolute -right-6 -top-6 w-20 h-24 bg-teal-500/10 rounded-full blur-xl"></div>
             <button onclick="dismissPopup()" class="absolute top-2 right-2 text-slate-500 hover:text-slate-300 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
-            <div class="flex items-center space-x-3">
-                <div id="popup_color_indicator" class="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-white text-base shadow-lg shrink-0">W</div>
+            <div class="flex items-center space-x-2.5">
+                <div id="popup_color_indicator" class="w-8 h-8 rounded-lg flex items-center justify-center font-extrabold text-white text-sm shadow-lg shrink-0">W</div>
                 <div class="w-full">
-                    <div class="text-[8px] sm:text-[9px] text-emerald-400 font-extrabold uppercase tracking-widest mb-0.5">NEXT ROUND TARGET</div>
+                    <div class="text-[8px] sm:text-[9px] text-emerald-400 font-extrabold uppercase tracking-widest mb-0">NEXT ROUND TARGET</div>
                     <div class="flex items-baseline space-x-1.5 font-mono">
-                        <span id="popup_bet_display" class="text-base sm:text-lg font-black text-white">0 U</span>
-                        <span id="popup_color_desc" class="text-[10px] sm:text-xs font-semibold text-slate-400 truncate">Waiting for Result</span>
+                        <span id="popup_bet_display" class="text-sm sm:text-base font-black text-white">0 U</span>
+                        <span id="popup_color_desc" class="text-[9px] sm:text-[10px] font-semibold text-slate-400 truncate">Waiting for Result</span>
                     </div>
                     
-                    <div class="mt-2 border-t border-slate-800/80 pt-1.5">
-                        <div id="popup_trend" class="mt-0.5">
-                            <div class="flex justify-between items-baseline mb-1.5">
+                    <!-- Compressed gap, margin-top, and padding-top -->
+                    <div class="mt-1 border-t border-slate-800/80 pt-1">
+                        <div id="popup_trend">
+                            <div class="flex justify-between items-baseline mb-0.5">
                                 <span class="text-slate-500 text-[8px] font-medium uppercase tracking-wider">Session Trend:</span>
-                                <span id="popup_current_streak_val" class="text-[9px] uppercase font-bold tracking-wider">NONE</span>
+                                <span id="popup_current_streak_val" class="text-[8px] uppercase font-bold tracking-wider">NONE</span>
                             </div>
-                            <div id="popup_trend_container" class="flex flex-wrap gap-[3px]">
-                                <span class="text-[8px] text-slate-600 font-mono italic">None</span>
+                            
+                            <!-- 12-COLUMN GRID FOR EXACTLY 3 ROWS OF 12 (36 TOTAL) -->
+                            <div id="popup_trend_container" class="grid grid-cols-12 gap-[2px] w-fit mb-0.5">
+                                <span class="text-[8px] text-slate-600 font-mono italic col-span-12">None</span>
+                            </div>
+                            
+                            <!-- Trend Counts -->
+                            <div class="flex justify-between items-center pt-0.5 border-t border-slate-800/80 px-0.5">
+                                <div class="flex gap-0.5 items-baseline"><span class="text-[7px] text-emerald-500 font-bold">WW</span><span id="trend_ww" class="text-[8px] text-white font-mono">0</span></div>
+                                <div class="flex gap-0.5 items-baseline"><span class="text-[7px] text-emerald-500 font-bold">sinW</span><span id="trend_sinw" class="text-[8px] text-white font-mono">0</span></div>
+                                <div class="flex gap-0.5 items-baseline"><span class="text-[7px] text-rose-500 font-bold">LL</span><span id="trend_ll" class="text-[8px] text-white font-mono">0</span></div>
+                                <div class="flex gap-0.5 items-baseline"><span class="text-[7px] text-rose-500 font-bold">sinL</span><span id="trend_sinl" class="text-[8px] text-white font-mono">0</span></div>
                             </div>
                         </div>
 
@@ -229,6 +243,6 @@
         </div>
     </div>
     
-    <script src="{{ url_for('static', filename='js/script.js') }}?v=25"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}?v=48"></script>
 </body>
 </html>

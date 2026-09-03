@@ -118,7 +118,8 @@ const renderNumberGrid = (lastSpunNumber = null, state) => {
 };
 
 const updateTargetIndicator = (indicator, desc, targetType) => {
-    indicator.className = "w-9 h-9 rounded-lg flex items-center justify-center font-bold text-white text-base shadow-md shrink-0";
+    // Adjusted w-8 h-8 rounded-lg text-sm to shrink icon overall
+    indicator.className = "w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-sm shadow-md shrink-0";
     
     if (targetType === "Player") { indicator.classList.add("bg-blue-600", "shadow-blue-900/40"); indicator.innerText = "P"; if(desc) desc.innerText = "on Player"; }
     else if (targetType === "Banker") { indicator.classList.add("bg-red-600", "shadow-red-900/40"); indicator.innerText = "B"; if(desc) desc.innerText = "on Banker"; }
@@ -151,18 +152,19 @@ const updatePopupHUD = (state) => {
         }
     }
     
+    // Adjusted wrapper classes to p-2.5 rounded-xl
     if (lastRealSpin) {
         if (lastRealSpin.outcome === "Win") {
-            popupCard.className = "bg-emerald-950/95 border border-emerald-500/80 rounded-2xl p-3.5 shadow-2xl shadow-emerald-500/10 relative overflow-hidden backdrop-blur-md transition-all duration-300";
+            popupCard.className = "bg-emerald-950/95 border border-emerald-500/80 rounded-xl p-2.5 shadow-2xl shadow-emerald-500/10 relative overflow-hidden backdrop-blur-md transition-all duration-300";
             if (glowCircle) glowCircle.className = "absolute -right-6 -top-6 w-20 h-24 bg-emerald-400/20 rounded-full blur-xl";
             document.querySelector('#next_play_popup svg').setAttribute('stroke', '#a7f3d0'); 
         } else {
-            popupCard.className = "bg-rose-950/95 border border-rose-500/80 rounded-2xl p-3.5 shadow-2xl shadow-rose-500/10 relative overflow-hidden backdrop-blur-md transition-all duration-300";
+            popupCard.className = "bg-rose-950/95 border border-rose-500/80 rounded-xl p-2.5 shadow-2xl shadow-rose-500/10 relative overflow-hidden backdrop-blur-md transition-all duration-300";
             if (glowCircle) glowCircle.className = "absolute -right-6 -top-6 w-20 h-24 bg-rose-400/20 rounded-full blur-xl";
             document.querySelector('#next_play_popup svg').setAttribute('stroke', '#fecdd3'); 
         }
     } else {
-        popupCard.className = "bg-slate-950/95 border border-slate-700/80 rounded-2xl p-3.5 shadow-2xl relative overflow-hidden backdrop-blur-md transition-all duration-300";
+        popupCard.className = "bg-slate-950/95 border border-slate-700/80 rounded-xl p-2.5 shadow-2xl relative overflow-hidden backdrop-blur-md transition-all duration-300";
         if (glowCircle) glowCircle.className = "absolute -right-6 -top-6 w-20 h-24 bg-teal-500/10 rounded-full blur-xl";
         document.querySelector('#next_play_popup svg').setAttribute('stroke', '#94a3b8'); 
     }
@@ -171,6 +173,8 @@ const updatePopupHUD = (state) => {
     document.getElementById('popup_bet_display').innerText = formatDisplay(state.next_bet, 'small', true);
 
     let streakStr = `<span class="text-slate-500 font-medium">NONE</span>`;
+    let countWW = 0, countLL = 0, countSinW = 0, countSinL = 0;
+    
     if (state.history && state.history.length > 0) {
         let latest = state.history[0];
         let w = latest.runWin || 0;
@@ -190,31 +194,99 @@ const updatePopupHUD = (state) => {
         } else if (a === 2) {
             streakStr = `<span class="text-fuchsia-400">ALT x2</span>`;
         }
+        
+        let wlSpinsList = state.history.filter(s => s.outcome === 'Win' || s.outcome === 'Loss').slice(0, 36).reverse(); 
+        
+        if (wlSpinsList.length > 0) {
+            let blocks = Array();
+            let currentBlock = { outcome: wlSpinsList[0].outcome, count: 1 };
+            
+            for (let i = 1; i < wlSpinsList.length; i++) {
+                if (wlSpinsList[i].outcome === currentBlock.outcome) {
+                    currentBlock.count++;
+                } else {
+                    blocks.push(currentBlock);
+                    currentBlock = { outcome: wlSpinsList[i].outcome, count: 1 };
+                }
+            }
+            blocks.push(currentBlock);
+            
+            let wBlocks = blocks.filter(b => b.outcome === 'Win');
+            if (wBlocks.length > 0) {
+                let latestType = wBlocks[wBlocks.length - 1].count >= 2 ? 'WW' : 'sinW';
+                let count = 0;
+                for (let i = wBlocks.length - 1; i >= 0; i--) {
+                    let t = wBlocks[i].count >= 2 ? 'WW' : 'sinW';
+                    if (t === latestType) count++;
+                    else break; 
+                }
+                if (latestType === 'WW') countWW = count;
+                else countSinW = count;
+            }
+
+            let lBlocks = blocks.filter(b => b.outcome === 'Loss');
+            if (lBlocks.length > 0) {
+                let latestType = lBlocks[lBlocks.length - 1].count >= 2 ? 'LL' : 'sinL';
+                let count = 0;
+                for (let i = lBlocks.length - 1; i >= 0; i--) {
+                    let t = lBlocks[i].count >= 2 ? 'LL' : 'sinL';
+                    if (t === latestType) count++;
+                    else break; 
+                }
+                if (latestType === 'LL') countLL = count;
+                else countSinL = count;
+            }
+        }
     }
 
     const streakValEl = document.getElementById('popup_current_streak_val');
     if (streakValEl) streakValEl.innerHTML = streakStr;
     
+    const wwEl = document.getElementById('trend_ww');
+    if (wwEl) wwEl.innerText = countWW;
+    const llEl = document.getElementById('trend_ll');
+    if (llEl) llEl.innerText = countLL;
+    const sinwEl = document.getElementById('trend_sinw');
+    if (sinwEl) sinwEl.innerText = countSinW;
+    const sinlEl = document.getElementById('trend_sinl');
+    if (sinlEl) sinlEl.innerText = countSinL;
+    
     const popupTrendContainer = document.getElementById('popup_trend_container');
     if (popupTrendContainer) {
         if (!state.history || state.history.length === 0) {
-            popupTrendContainer.innerHTML = `<span class="text-[8px] text-slate-600 font-mono italic">None</span>`;
+            popupTrendContainer.innerHTML = `<span class="text-[8px] text-slate-600 font-mono italic col-span-12">None</span>`;
         } else {
             let wlSpins = state.history.filter(s => s.outcome === 'Win' || s.outcome === 'Loss');
             
             if (wlSpins.length === 0) {
-                popupTrendContainer.innerHTML = `<span class="text-[8px] text-slate-600 font-mono italic">None</span>`;
+                popupTrendContainer.innerHTML = `<span class="text-[8px] text-slate-600 font-mono italic col-span-12">None</span>`;
             } else {
-                let recentSpins = wlSpins.slice(0, 30).reverse();
+                let recentSpins = wlSpins.slice(0, 36).reverse();
                 let trendHtml = '';
                 
-                recentSpins.forEach(s => {
-                    if (s.outcome === 'Win') {
-                        trendHtml += `<div class="w-[14px] h-[14px] rounded-[2px] bg-emerald-950/80 border border-emerald-500/50 text-emerald-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none shrink-0">W</div>`;
-                    } else if (s.outcome === 'Loss') {
-                        trendHtml += `<div class="w-[14px] h-[14px] rounded-[2px] bg-rose-950/80 border border-rose-500/50 text-rose-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none shrink-0">L</div>`;
+                for(let i=0; i < recentSpins.length; i++) {
+                    let s = recentSpins[i];
+                    
+                    let isStreak = false;
+                    if ((i > 0 && recentSpins[i-1].outcome === s.outcome) || 
+                        (i < recentSpins.length - 1 && recentSpins[i+1].outcome === s.outcome)) {
+                        isStreak = true;
                     }
-                });
+                    
+                    if (s.outcome === 'Win') {
+                        if (isStreak) {
+                            trendHtml += `<div class="w-[14px] h-[14px] rounded-t-[2px] bg-emerald-950/80 border-x border-t border-emerald-500/50 border-b-[3px] border-b-emerald-400 text-emerald-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none">W</div>`;
+                        } else {
+                            trendHtml += `<div class="w-[14px] h-[14px] rounded-[2px] bg-emerald-950/80 border border-emerald-500/50 text-emerald-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none">W</div>`;
+                        }
+                    } else if (s.outcome === 'Loss') {
+                        if (isStreak) {
+                            trendHtml += `<div class="w-[14px] h-[14px] rounded-t-[2px] bg-rose-950/80 border-x border-t border-rose-500/50 border-b-[3px] border-b-rose-500 text-rose-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none">L</div>`;
+                        } else {
+                            trendHtml += `<div class="w-[14px] h-[14px] rounded-[2px] bg-rose-950/80 border border-rose-500/50 text-rose-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none">L</div>`;
+                        }
+                    }
+                }
                 
                 popupTrendContainer.innerHTML = trendHtml;
             }
@@ -230,7 +302,6 @@ const dismissPopup = () => {
     if(popup) popup.classList.add('opacity-0', 'translate-y-12', 'pointer-events-none');
 };
 
-// COLUMN HIDE/SHOW LOGIC
 window.toggleColumnMenu = () => {
     document.getElementById('column_menu').classList.toggle('hidden');
 };
@@ -369,20 +440,22 @@ const updateUI = (state) => {
     if (maxAltEl) maxAltEl.innerText = maxRunAlt;
 
     const alertBox = document.getElementById('status_alert');
+    const alertContainer = document.getElementById('status_alert_container');
+
     if (state.status === "ACTIVE") {
         document.getElementById('number_grid_container').classList.remove('opacity-50', 'pointer-events-none', 'grayscale');
-        alertBox.className = "hidden";
+        if(alertContainer) alertContainer.classList.add('hidden');
     } else {
         document.getElementById('number_grid_container').classList.add('opacity-50', 'pointer-events-none', 'grayscale');
-        alertBox.classList.remove('hidden');
+        if(alertContainer) alertContainer.classList.remove('hidden');
 
         if (state.status === "TARGET_REACHED") {
-            alertBox.className = "flex flex-col space-y-2 rounded-xl p-2 border border-emerald-500 bg-emerald-950/30 text-emerald-400 mb-3";
+            alertBox.className = "flex flex-col space-y-2 rounded-xl p-2 border border-emerald-500 bg-emerald-950/30 text-emerald-400 mb-1 relative z-10";
             document.getElementById('status_icon').innerText = "🎯";
             document.getElementById('status_title').innerText = "Target Reached!";
             document.getElementById('status_msg').innerText = "Congratulations! You hit your target. Session saved.";
         } else if (state.status === "STOP_LOSS_HIT") {
-            alertBox.className = "flex flex-col space-y-2 rounded-xl p-2 border border-rose-500 bg-rose-950/30 text-rose-400 mb-3";
+            alertBox.className = "flex flex-col space-y-2 rounded-xl p-2 border border-rose-500 bg-rose-950/30 text-rose-400 mb-1 relative z-10";
             document.getElementById('status_icon').innerText = "🛑";
             document.getElementById('status_title').innerText = "Stop Loss Hit";
             document.getElementById('status_msg').innerText = "You have dropped to your stop loss limit.";
@@ -472,14 +545,13 @@ const updateUI = (state) => {
             outcomeBadge = `<span class="bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase tracking-wider font-mono">Push</span>`;
         }
 
-        // ADDED CLASSES FOR DYNAMIC HIDING
         logRows += `
             <tr class="${rowBgClass} transition-colors">
                 <td class="py-1.5 px-2 text-slate-400 font-mono font-medium text-[10px] sm:text-[11px] col-spin">${spin.spin}</td>
                 <td class="py-1.5 px-2 col-bet-on">${targetCell}</td>
                 <td class="py-1.5 px-2 font-mono font-medium text-slate-200 text-[10px] sm:text-xs col-stake">${formatDisplay(spin.bet_amount, 'small', true)}</td>
                 <td class="py-1.5 px-2 text-center col-result">${spunNumberCell}</td>
-                <td class="py-1.5 px-2 text-center col-status">${outcomeBadge}</td>
+                <td class="py-1.5 px-2 text-center">${outcomeBadge}</td>
                 <td class="py-1.5 px-2 text-right font-mono ${pnlClass} text-[10px] sm:text-xs col-spin-pnl">${formatDisplay(spin.pnl, 'small', true)}</td>
                 <td class="py-1.5 px-2 text-right font-mono font-bold text-white text-[10px] sm:text-xs col-bankroll">${formatDisplay(spin.bankroll, 'small', true)}</td>
             </tr>
@@ -558,10 +630,20 @@ const resetSession = async () => {
     }
 };
 
+document.addEventListener('DOMContentLoaded', () => {
+    const noteInput = document.getElementById('quick_note');
+    if (noteInput) {
+        noteInput.value = localStorage.getItem('casinoQuickNote') || '';
+        noteInput.addEventListener('input', (e) => {
+            localStorage.setItem('casinoQuickNote', e.target.value);
+        });
+    }
+});
+
 window.addEventListener('DOMContentLoaded', async () => {
     try {
         const response = await fetch('/state');
         updateUI(await response.json());
-        initColumns(); // Initialize Column Toggle Checkboxes
+        initColumns(); 
     } catch (err) { console.error("Error pulling initial state:", err); }
 });
