@@ -118,7 +118,6 @@ const renderNumberGrid = (lastSpunNumber = null, state) => {
 };
 
 const updateTargetIndicator = (indicator, desc, targetType) => {
-    // Adjusted w-8 h-8 rounded-lg text-sm to shrink icon overall
     indicator.className = "w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-sm shadow-md shrink-0";
     
     if (targetType === "Player") { indicator.classList.add("bg-blue-600", "shadow-blue-900/40"); indicator.innerText = "P"; if(desc) desc.innerText = "on Player"; }
@@ -152,7 +151,6 @@ const updatePopupHUD = (state) => {
         }
     }
     
-    // Adjusted wrapper classes to p-2.5 rounded-xl
     if (lastRealSpin) {
         if (lastRealSpin.outcome === "Win") {
             popupCard.className = "bg-emerald-950/95 border border-emerald-500/80 rounded-xl p-2.5 shadow-2xl shadow-emerald-500/10 relative overflow-hidden backdrop-blur-md transition-all duration-300";
@@ -173,7 +171,8 @@ const updatePopupHUD = (state) => {
     document.getElementById('popup_bet_display').innerText = formatDisplay(state.next_bet, 'small', true);
 
     let streakStr = `<span class="text-slate-500 font-medium">NONE</span>`;
-    let countWW = 0, countLL = 0, countSinW = 0, countSinL = 0;
+    let currWW = 0, currSinW = 0, currLL = 0, currSinL = 0;
+    let maxWW = 0, maxSinW = 0, maxLL = 0, maxSinL = 0;
     
     if (state.history && state.history.length > 0) {
         let latest = state.history[0];
@@ -195,61 +194,73 @@ const updatePopupHUD = (state) => {
             streakStr = `<span class="text-fuchsia-400">ALT x2</span>`;
         }
         
-        let wlSpinsList = state.history.filter(s => s.outcome === 'Win' || s.outcome === 'Loss').slice(0, 36).reverse(); 
+        // --- NEW ALGORITHM: Parse ENTIRE session to find Max and Current Streaks ---
+        // Reverse array so oldest spin is at index 0
+        let allWlSpins = state.history.filter(s => s.outcome === 'Win' || s.outcome === 'Loss').reverse(); 
         
-        if (wlSpinsList.length > 0) {
+        if (allWlSpins.length > 0) {
+            // 1. Group spins into continuous blocks of identical outcomes
             let blocks = Array();
-            let currentBlock = { outcome: wlSpinsList[0].outcome, count: 1 };
+            let currentBlock = { outcome: allWlSpins[0].outcome, count: 1 };
             
-            for (let i = 1; i < wlSpinsList.length; i++) {
-                if (wlSpinsList[i].outcome === currentBlock.outcome) {
+            for (let i = 1; i < allWlSpins.length; i++) {
+                if (allWlSpins[i].outcome === currentBlock.outcome) {
                     currentBlock.count++;
                 } else {
                     blocks.push(currentBlock);
-                    currentBlock = { outcome: wlSpinsList[i].outcome, count: 1 };
+                    currentBlock = { outcome: allWlSpins[i].outcome, count: 1 };
                 }
             }
             blocks.push(currentBlock);
             
+            // 2. Analyze Win Blocks
             let wBlocks = blocks.filter(b => b.outcome === 'Win');
-            if (wBlocks.length > 0) {
-                let latestType = wBlocks[wBlocks.length - 1].count >= 2 ? 'WW' : 'sinW';
-                let count = 0;
-                for (let i = wBlocks.length - 1; i >= 0; i--) {
-                    let t = wBlocks[i].count >= 2 ? 'WW' : 'sinW';
-                    if (t === latestType) count++;
-                    else break; 
+            let tempWW = 0, tempSinW = 0;
+            wBlocks.forEach(b => {
+                if (b.count >= 2) {
+                    tempWW++;
+                    tempSinW = 0; // Broke the sinW streak
+                    if (tempWW > maxWW) maxWW = tempWW;
+                } else {
+                    tempSinW++;
+                    tempWW = 0; // Broke the WW streak
+                    if (tempSinW > maxSinW) maxSinW = tempSinW;
                 }
-                if (latestType === 'WW') countWW = count;
-                else countSinW = count;
-            }
+            });
+            currWW = tempWW;
+            currSinW = tempSinW;
 
+            // 3. Analyze Loss Blocks
             let lBlocks = blocks.filter(b => b.outcome === 'Loss');
-            if (lBlocks.length > 0) {
-                let latestType = lBlocks[lBlocks.length - 1].count >= 2 ? 'LL' : 'sinL';
-                let count = 0;
-                for (let i = lBlocks.length - 1; i >= 0; i--) {
-                    let t = lBlocks[i].count >= 2 ? 'LL' : 'sinL';
-                    if (t === latestType) count++;
-                    else break; 
+            let tempLL = 0, tempSinL = 0;
+            lBlocks.forEach(b => {
+                if (b.count >= 2) {
+                    tempLL++;
+                    tempSinL = 0; // Broke the sinL streak
+                    if (tempLL > maxLL) maxLL = tempLL;
+                } else {
+                    tempSinL++;
+                    tempLL = 0; // Broke the LL streak
+                    if (tempSinL > maxSinL) maxSinL = tempSinL;
                 }
-                if (latestType === 'LL') countLL = count;
-                else countSinL = count;
-            }
+            });
+            currLL = tempLL;
+            currSinL = tempSinL;
         }
     }
 
     const streakValEl = document.getElementById('popup_current_streak_val');
     if (streakValEl) streakValEl.innerHTML = streakStr;
     
+    // Inject Live Current/Max Trend Counts
     const wwEl = document.getElementById('trend_ww');
-    if (wwEl) wwEl.innerText = countWW;
-    const llEl = document.getElementById('trend_ll');
-    if (llEl) llEl.innerText = countLL;
+    if (wwEl) wwEl.innerText = `${currWW}/${maxWW}`;
     const sinwEl = document.getElementById('trend_sinw');
-    if (sinwEl) sinwEl.innerText = countSinW;
+    if (sinwEl) sinwEl.innerText = `${currSinW}/${maxSinW}`;
+    const llEl = document.getElementById('trend_ll');
+    if (llEl) llEl.innerText = `${currLL}/${maxLL}`;
     const sinlEl = document.getElementById('trend_sinl');
-    if (sinlEl) sinlEl.innerText = countSinL;
+    if (sinlEl) sinlEl.innerText = `${currSinL}/${maxSinL}`;
     
     const popupTrendContainer = document.getElementById('popup_trend_container');
     if (popupTrendContainer) {
@@ -630,6 +641,7 @@ const resetSession = async () => {
     }
 };
 
+// Wire up the Quick Note local storage persistence
 document.addEventListener('DOMContentLoaded', () => {
     const noteInput = document.getElementById('quick_note');
     if (noteInput) {
