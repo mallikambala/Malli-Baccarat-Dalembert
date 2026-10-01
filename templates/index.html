@@ -42,9 +42,11 @@
                 <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 rounded-md sm:rounded-lg px-2 py-1 shadow-inner">
                     <span class="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider hidden md:block">SYS:</span>
                     <select id="progression_selector" onchange="changeAppState()" class="bg-transparent text-teal-400 text-[10px] sm:text-sm font-bold font-mono outline-none cursor-pointer focus:ring-0 appearance-none">
+                        <!-- UPDATED: Added Star 2.2 Option and set as selected default -->
+                        <option value="star22" selected>Star 2.2</option>
                         <option value="star2">Star 2.0</option>
                         <option value="dalembert">D'Alembert</option>
-                        <option value="3step_ladder" selected>3-Step Ladder</option>
+                        <option value="3step_ladder">3-Step Ladder</option>
                     </select>
                 </div>
                 <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 rounded-md sm:rounded-lg px-2 py-1 shadow-inner">
@@ -66,7 +68,7 @@
     <main class="w-full mx-auto px-3 sm:px-6 lg:px-8 mt-3 sm:mt-4 grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-start">
         
         <div class="lg:col-span-5 xl:col-span-3 space-y-3 sm:space-y-4">
-            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-xl relative overflow-hidden flex flex-col h-full">
+            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-xl relative overflow-hidden flex flex-col">
                 <div class="absolute -right-4 -top-4 w-24 h-24 bg-teal-500/5 rounded-full blur-xl pointer-events-none"></div>
                 <div class="flex items-center justify-between mb-3 relative z-10">
                     <h2 class="text-xs sm:text-sm font-semibold text-slate-400 uppercase tracking-wider">Current Status</h2>
@@ -209,7 +211,7 @@
                     <div class="text-[8px] sm:text-[9px] text-emerald-400 font-extrabold uppercase tracking-widest mb-0">NEXT ROUND TARGET</div>
                     <div class="flex items-baseline space-x-1.5 font-mono">
                         <span id="popup_bet_display" class="text-sm sm:text-base font-black text-white">0 U</span>
-                        <span id="popup_color_desc" class="text-[9px] sm:text-[10px] font-semibold text-slate-400 truncate">Waiting for Result</span>
+                        <span id="popup_color_desc" class="text-[10px] sm:text-xs font-semibold text-slate-400 truncate">Waiting for Result</span>
                     </div>
                     
                     <div class="mt-1 border-t border-slate-800/80 pt-1">
@@ -219,11 +221,12 @@
                                 <span id="popup_current_streak_val" class="text-[8px] uppercase font-bold tracking-wider">NONE</span>
                             </div>
                             
+                            <!-- 12-COLUMN GRID (3 ROWS OF 12 = 36 MAX) -->
                             <div id="popup_trend_container" class="grid grid-cols-12 gap-[2px] w-fit mb-1">
                                 <span class="text-[8px] text-slate-600 font-mono italic col-span-12">None</span>
                             </div>
                             
-                            <!-- UPDATED TO SHOW CURRENT/MAX FORMAT (e.g. 0/5) -->
+                            <!-- 4-STAT TRACKER (WW, sinW, LL, sinL) -->
                             <div class="flex justify-between items-center pt-0.5 border-t border-slate-800/80 px-0.5">
                                 <div class="flex gap-0.5 items-baseline"><span class="text-[7px] text-emerald-500 font-bold">WW</span><span id="trend_ww" class="text-[8px] text-white font-mono">0/0</span></div>
                                 <div class="flex gap-0.5 items-baseline"><span class="text-[7px] text-emerald-500 font-bold">sinW</span><span id="trend_sinw" class="text-[8px] text-white font-mono">0/0</span></div>
@@ -231,14 +234,13 @@
                                 <div class="flex gap-0.5 items-baseline"><span class="text-[7px] text-rose-500 font-bold">sinL</span><span id="trend_sinl" class="text-[8px] text-white font-mono">0/0</span></div>
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Cache buster bumped to v52 -->
-    <script src="{{ url_for('static', filename='js/script.js') }}?v=52"></script>
+    <!-- Cache buster bumped to v101 -->
+    <script src="{{ url_for('static', filename='js/script.js') }}?v=101"></script>
 </body>
 </html>

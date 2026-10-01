@@ -5,7 +5,8 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.secret_key = "mallis_baccarat_super_secret_key"
 
 class CasinoTracker:
-    def __init__(self, start_bankroll=75, base_bet=1, progression="3step_ladder", game_type="baccarat"):
+    # UPDATED: Set "star22" as the default progression on load
+    def __init__(self, start_bankroll=75, base_bet=1, progression="star22", game_type="baccarat"):
         self.start_bankroll = float(start_bankroll)
         self.bankroll = float(start_bankroll)
         self.base_bet = base_bet
@@ -19,11 +20,19 @@ class CasinoTracker:
         self.ladder_level = 0
         self.ladder_step = 1
 
-        # Star 2.0 State (Parlay System)
+        # Star 2.0 State (Original Parlay System)
         self.star_seq = list((1, 1, 1, 2, 2, 5, 5, 10, 10, 20, 20))
         self.star_step_idx = 0
         self.is_parlay = False
         self.star_parlay_amount = 0
+
+        # NEW: Star 2.2 State (Safety Net System)
+        self.star22_seq = list((1, 1, 1, 2, 2, 5, 5, 10, 10, 20)) # Exactly 10 steps totaling 47 units
+        self.star22_step_idx = 0
+        self.is_parlay22 = False
+        self.star22_parlay_amount = 0
+        # Indices 1, 2, 3, 7, and 9 represent Boxes 2, 3, 4, 8, and 10 (0-indexed)
+        self.star22_safety_indices = set((1, 2, 3, 7, 9)) 
 
         # Rafael's 6 State
         self.L2R = ['Low', 'Even', 'Red', 'Black', 'Odd', 'High']
@@ -70,6 +79,12 @@ class CasinoTracker:
                 return self.star_parlay_amount
             idx = min(self.star_step_idx, len(self.star_seq) - 1)
             return self.base_bet * self.star_seq[idx]
+
+        elif self.progression == "star22":
+            if self.is_parlay22:
+                return self.star22_parlay_amount
+            idx = min(self.star22_step_idx, len(self.star22_seq) - 1)
+            return self.base_bet * self.star22_seq[idx]
                 
         return self.current_bet
 
@@ -102,6 +117,13 @@ class CasinoTracker:
             else:
                 self.is_parlay = True
                 self.star_parlay_amount = bet_amount + pnl
+        elif self.progression == "star22":
+            if self.is_parlay22:
+                self.is_parlay22 = False
+                self.star22_step_idx = 0
+            else:
+                self.is_parlay22 = True
+                self.star22_parlay_amount = bet_amount + pnl
 
     def apply_progression_loss(self, bet_amount):
         if self.progression == "dalembert":
@@ -117,6 +139,16 @@ class CasinoTracker:
             if self.is_parlay:
                 self.is_parlay = False
             self.star_step_idx += 1
+        elif self.progression == "star22":
+            if self.is_parlay22:
+                self.is_parlay22 = False
+                # Safety Net Check
+                if self.star22_step_idx in self.star22_safety_indices:
+                    pass 
+                else:
+                    self.star22_step_idx += 1 
+            else:
+                self.star22_step_idx += 1
 
     def record_outcome(self, spun_value):
         if self.is_session_over(): return self.get_state()
@@ -249,7 +281,8 @@ class CasinoTracker:
             "spin_count": self.spin_count, "game_type": self.game_type,
             "progression": self.progression,
             "ladder_level": self.ladder_level + 1, "ladder_step": self.ladder_step,
-            "star_step_idx": self.star_step_idx, "is_parlay": self.is_parlay,
+            "star_step_idx": self.star22_step_idx if self.progression == "star22" else self.star_step_idx,
+            "is_parlay": self.is_parlay22 if self.progression == "star22" else self.is_parlay,
             "rafael_dir": self.rafael_dir, "rafael_idx": self.rafael_idx,
             "next_color": next_target, "next_bet": next_bet,
             "status": self.get_status(), "history": self.history[::-1],
