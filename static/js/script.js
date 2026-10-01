@@ -194,12 +194,9 @@ const updatePopupHUD = (state) => {
             streakStr = `<span class="text-fuchsia-400">ALT x2</span>`;
         }
         
-        // --- NEW ALGORITHM: Parse ENTIRE session to find Max and Current Streaks ---
-        // Reverse array so oldest spin is at index 0
         let allWlSpins = state.history.filter(s => s.outcome === 'Win' || s.outcome === 'Loss').reverse(); 
         
         if (allWlSpins.length > 0) {
-            // 1. Group spins into continuous blocks of identical outcomes
             let blocks = Array();
             let currentBlock = { outcome: allWlSpins[0].outcome, count: 1 };
             
@@ -213,34 +210,32 @@ const updatePopupHUD = (state) => {
             }
             blocks.push(currentBlock);
             
-            // 2. Analyze Win Blocks
             let wBlocks = blocks.filter(b => b.outcome === 'Win');
             let tempWW = 0, tempSinW = 0;
             wBlocks.forEach(b => {
                 if (b.count >= 2) {
                     tempWW++;
-                    tempSinW = 0; // Broke the sinW streak
+                    tempSinW = 0;
                     if (tempWW > maxWW) maxWW = tempWW;
                 } else {
                     tempSinW++;
-                    tempWW = 0; // Broke the WW streak
+                    tempWW = 0;
                     if (tempSinW > maxSinW) maxSinW = tempSinW;
                 }
             });
             currWW = tempWW;
             currSinW = tempSinW;
 
-            // 3. Analyze Loss Blocks
             let lBlocks = blocks.filter(b => b.outcome === 'Loss');
             let tempLL = 0, tempSinL = 0;
             lBlocks.forEach(b => {
                 if (b.count >= 2) {
                     tempLL++;
-                    tempSinL = 0; // Broke the sinL streak
+                    tempSinL = 0;
                     if (tempLL > maxLL) maxLL = tempLL;
                 } else {
                     tempSinL++;
-                    tempLL = 0; // Broke the LL streak
+                    tempLL = 0;
                     if (tempSinL > maxSinL) maxSinL = tempSinL;
                 }
             });
@@ -252,7 +247,6 @@ const updatePopupHUD = (state) => {
     const streakValEl = document.getElementById('popup_current_streak_val');
     if (streakValEl) streakValEl.innerHTML = streakStr;
     
-    // Inject Live Current/Max Trend Counts
     const wwEl = document.getElementById('trend_ww');
     if (wwEl) wwEl.innerText = `${currWW}/${maxWW}`;
     const sinwEl = document.getElementById('trend_sinw');
@@ -288,13 +282,13 @@ const updatePopupHUD = (state) => {
                         if (isStreak) {
                             trendHtml += `<div class="w-[14px] h-[14px] rounded-t-[2px] bg-emerald-950/80 border-x border-t border-emerald-500/50 border-b-[3px] border-b-emerald-400 text-emerald-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none">W</div>`;
                         } else {
-                            trendHtml += `<div class="w-[14px] h-[14px] rounded-[2px] bg-emerald-950/80 border border-emerald-500/50 text-emerald-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none">W</div>`;
+                            trendHtml += `<div class="w-[14px] h-[14px] rounded-full bg-emerald-950/80 border border-emerald-500/50 text-emerald-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none">W</div>`;
                         }
                     } else if (s.outcome === 'Loss') {
                         if (isStreak) {
                             trendHtml += `<div class="w-[14px] h-[14px] rounded-t-[2px] bg-rose-950/80 border-x border-t border-rose-500/50 border-b-[3px] border-b-rose-500 text-rose-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none">L</div>`;
                         } else {
-                            trendHtml += `<div class="w-[14px] h-[14px] rounded-[2px] bg-rose-950/80 border border-rose-500/50 text-rose-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none">L</div>`;
+                            trendHtml += `<div class="w-[14px] h-[14px] rounded-full bg-rose-950/80 border border-rose-500/50 text-rose-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none">L</div>`;
                         }
                     }
                 }
@@ -641,7 +635,6 @@ const resetSession = async () => {
     }
 };
 
-// Wire up the Quick Note local storage persistence
 document.addEventListener('DOMContentLoaded', () => {
     const noteInput = document.getElementById('quick_note');
     if (noteInput) {
