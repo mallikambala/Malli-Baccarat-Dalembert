@@ -9,29 +9,29 @@ const formatDisplay = (val, size = 'small', hideUnit = false) => {
     const absVal = Math.abs(val);
     const inrVal = absVal * multiplier;
     const sign = isNegative ? '-' : '';
-    
+
     const displayUnit = Number.isInteger(absVal) ? absVal : absVal.toFixed(2);
     const inrDisplay = inrVal.toLocaleString('en-IN', { maximumFractionDigits: 2 });
-    
+
     const primaryPart = `${sign}₹${inrDisplay}`;
     if (hideUnit) return primaryPart; 
-    
+
     let secondarySizeClass = 'text-[10px] text-slate-500';
     if (size === 'large') { secondarySizeClass = 'text-lg text-slate-400 font-medium'; }
     else if (size === 'medium') { secondarySizeClass = 'text-base text-slate-400 font-medium'; }
-    
+
     const secondaryPart = `<span class="${secondarySizeClass} ml-1">(${displayUnit} U)</span>`;
     return `${primaryPart}${secondaryPart}`;
 };
 
 const renderNumberGrid = (lastSpunNumber = null, state) => {
     const container = document.getElementById('number_grid_container');
-    
+
     if (state.game_type === 'baccarat') {
         const pHighlight = (lastSpunNumber && lastSpunNumber.startsWith('p_')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.01] z-10' : '';
         const bHighlight = (lastSpunNumber && lastSpunNumber.startsWith('b_')) ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-[1.01] z-10' : '';
         const tHighlight = (lastSpunNumber === 'Tie') ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-950 scale-[1.02] z-10' : '';
-        
+
         const genGridBtns = (prefix, nums, bgClass, shadowColor, isCenteredRow=false) => {
             return nums.map((n, i) => {
                 const startClass = (isCenteredRow && i === 0) ? 'col-start-2' : '';
@@ -64,7 +64,7 @@ const renderNumberGrid = (lastSpunNumber = null, state) => {
 
                 <div class="grid grid-cols-2 gap-1.5 sm:gap-2 mt-auto">
                     <button onclick="recordSpin('Tie')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 sm:py-3 rounded-xl border-t border-white/20 shadow-[0_4px_0_rgb(4,120,87)] active:shadow-[0_0px_0_rgb(4,120,87)] active:translate-y-[4px] transition-all text-sm sm:text-base tracking-widest ${tHighlight}">TIE (PUSH)</button>
-                    
+
                     <button id="undo_btn_dynamic" onclick="undoSpin()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-black py-2.5 sm:py-3 rounded-xl border-t border-white/10 shadow-[0_4px_0_rgb(15,23,42)] active:shadow-[0_0px_0_rgb(15,23,42)] active:translate-y-[4px] transition-all text-sm sm:text-base tracking-widest flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>
                         UNDO
@@ -75,13 +75,13 @@ const renderNumberGrid = (lastSpunNumber = null, state) => {
     } else if (state.game_type === 'roulette') {
         const reds = Array(1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36);
         let buttonsHtml = '';
-        
+
         for (let i = 1; i <= 36; i++) {
             const isRed = reds.includes(i);
             const bgClass = isRed ? 'bg-red-600 hover:bg-red-500' : 'bg-slate-800 hover:bg-slate-700';
             const shadowColor = isRed ? 'rgb(153,27,27)' : 'rgb(15,23,42)';
             const highlight = (lastSpunNumber == i) ? 'ring-2 ring-white scale-105 z-10' : '';
-            
+
             buttonsHtml += `
                 <button onclick="recordSpin('${i}')" 
                         class="w-full flex items-center justify-center ${bgClass} text-white font-black py-2.5 sm:py-3 rounded-lg transition-all text-sm sm:text-base border-t border-white/20 shadow-[0_3px_0_${shadowColor}] active:shadow-[0_0px_0_${shadowColor}] active:translate-y-[3px] ${highlight}">
@@ -89,9 +89,8 @@ const renderNumberGrid = (lastSpunNumber = null, state) => {
                 </button>
             `;
         }
-
         const zHighlight = (lastSpunNumber == 0) ? 'ring-2 ring-white scale-105 z-10' : '';
-        
+
         const zeroAndUndoHtml = `
             <div class="grid grid-cols-2 gap-1.5 sm:gap-2 mb-2 sm:mb-2.5 mt-auto">
                 <button onclick="recordSpin('0')" 
@@ -119,7 +118,7 @@ const renderNumberGrid = (lastSpunNumber = null, state) => {
 
 const updateTargetIndicator = (indicator, desc, targetType) => {
     indicator.className = "w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-sm shadow-md shrink-0";
-    
+
     if (targetType === "Player") { indicator.classList.add("bg-blue-600", "shadow-blue-900/40"); indicator.innerText = "P"; if(desc) desc.innerText = "on Player"; }
     else if (targetType === "Banker") { indicator.classList.add("bg-red-600", "shadow-red-900/40"); indicator.innerText = "B"; if(desc) desc.innerText = "on Banker"; }
     else if (targetType === "Red") { indicator.classList.add("bg-red-600", "shadow-red-900/40"); indicator.innerText = "R"; if(desc) desc.innerText = "on Red"; }
@@ -137,12 +136,12 @@ const updatePopupHUD = (state) => {
         if(popup) popup.classList.add('opacity-0', 'translate-y-12', 'pointer-events-none');
         return;
     }
-    
+
     const popupCard = popup.querySelector('div');
     const indicator = document.getElementById('popup_color_indicator');
     const colorDesc = document.getElementById('popup_color_desc');
     const glowCircle = popup.querySelector('.bg-teal-500\\/10'); 
-    
+
     let lastRealSpin = null;
     for(let i=0; i<state.history.length; i++) {
         if(state.history[i].outcome !== "Push" && state.history[i].outcome !== "Observed") {
@@ -150,7 +149,7 @@ const updatePopupHUD = (state) => {
             break;
         }
     }
-    
+
     if (lastRealSpin) {
         if (lastRealSpin.outcome === "Win") {
             popupCard.className = "bg-emerald-950/95 border border-emerald-500/80 rounded-xl p-2.5 shadow-2xl shadow-emerald-500/10 relative overflow-hidden backdrop-blur-md transition-all duration-300";
@@ -166,14 +165,14 @@ const updatePopupHUD = (state) => {
         if (glowCircle) glowCircle.className = "absolute -right-6 -top-6 w-20 h-24 bg-teal-500/10 rounded-full blur-xl";
         document.querySelector('#next_play_popup svg').setAttribute('stroke', '#94a3b8'); 
     }
-    
+
     updateTargetIndicator(indicator, colorDesc, state.next_color);
     document.getElementById('popup_bet_display').innerText = formatDisplay(state.next_bet, 'small', true);
 
     let streakStr = `<span class="text-slate-500 font-medium">NONE</span>`;
-    let currWW = 0, currSinW = 0, currLL = 0, currSinL = 0;
-    let maxWW = 0, maxSinW = 0, maxLL = 0, maxSinL = 0;
-    
+    let currWW = 0, currSinW = 0, currLL = 0, currSinL = 0, curr2x2 = 0;
+    let maxWW = 0, maxSinW = 0, maxLL = 0, maxSinL = 0, max2x2 = 0;
+
     if (state.history && state.history.length > 0) {
         let latest = state.history[0];
         let w = latest.runWin || 0;
@@ -193,13 +192,13 @@ const updatePopupHUD = (state) => {
         } else if (a === 2) {
             streakStr = `<span class="text-fuchsia-400">ALT x2</span>`;
         }
-        
+
         let allWlSpins = state.history.filter(s => s.outcome === 'Win' || s.outcome === 'Loss').reverse(); 
-        
+
         if (allWlSpins.length > 0) {
             let blocks = Array();
             let currentBlock = { outcome: allWlSpins[0].outcome, count: 1 };
-            
+
             for (let i = 1; i < allWlSpins.length; i++) {
                 if (allWlSpins[i].outcome === currentBlock.outcome) {
                     currentBlock.count++;
@@ -209,7 +208,8 @@ const updatePopupHUD = (state) => {
                 }
             }
             blocks.push(currentBlock);
-            
+
+            // 1. Calculate WW and sinW streaks
             let wBlocks = blocks.filter(b => b.outcome === 'Win');
             let tempWW = 0, tempSinW = 0;
             wBlocks.forEach(b => {
@@ -226,6 +226,7 @@ const updatePopupHUD = (state) => {
             currWW = tempWW;
             currSinW = tempSinW;
 
+            // 2. Calculate LL and sinL streaks
             let lBlocks = blocks.filter(b => b.outcome === 'Loss');
             let tempLL = 0, tempSinL = 0;
             lBlocks.forEach(b => {
@@ -241,12 +242,25 @@ const updatePopupHUD = (state) => {
             });
             currLL = tempLL;
             currSinL = tempSinL;
+
+            // 3. Calculate Distinct Double+ Sequence Streak: 2x2 (each block with length >= 2 counts as 1)
+            let temp2x2 = 0;
+            blocks.forEach(b => {
+                if (b.count >= 2) {
+                    temp2x2++;
+                    if (temp2x2 > max2x2) max2x2 = temp2x2;
+                } else {
+                    temp2x2 = 0;
+                }
+            });
+            curr2x2 = temp2x2;
         }
     }
 
     const streakValEl = document.getElementById('popup_current_streak_val');
     if (streakValEl) streakValEl.innerHTML = streakStr;
-    
+
+    // Update Telemetry Stat Displays
     const wwEl = document.getElementById('trend_ww');
     if (wwEl) wwEl.innerText = `${currWW}/${maxWW}`;
     const sinwEl = document.getElementById('trend_sinw');
@@ -255,49 +269,57 @@ const updatePopupHUD = (state) => {
     if (llEl) llEl.innerText = `${currLL}/${maxLL}`;
     const sinlEl = document.getElementById('trend_sinl');
     if (sinlEl) sinlEl.innerText = `${currSinL}/${maxSinL}`;
-    
+    const duoEl = document.getElementById('trend_2x2');
+    if (duoEl) duoEl.innerText = `${curr2x2}/${max2x2}`;
+
     const popupTrendContainer = document.getElementById('popup_trend_container');
     if (popupTrendContainer) {
         if (!state.history || state.history.length === 0) {
             popupTrendContainer.innerHTML = `<span class="text-[8px] text-slate-600 font-mono italic col-span-12">None</span>`;
         } else {
             let wlSpins = state.history.filter(s => s.outcome === 'Win' || s.outcome === 'Loss');
-            
+
             if (wlSpins.length === 0) {
                 popupTrendContainer.innerHTML = `<span class="text-[8px] text-slate-600 font-mono italic col-span-12">None</span>`;
             } else {
                 let recentSpins = wlSpins.slice(0, 36).reverse();
                 let trendHtml = '';
-                
+
                 for(let i=0; i < recentSpins.length; i++) {
                     let s = recentSpins[i];
-                    
+
                     let isStreak = false;
                     if ((i > 0 && recentSpins[i-1].outcome === s.outcome) || 
                         (i < recentSpins.length - 1 && recentSpins[i+1].outcome === s.outcome)) {
                         isStreak = true;
                     }
-                    
+
+                    // DISTINCT STYLING:
+                    // Single Win/Loss = Circled, lighter shades (emerald-200 / rose-200)
+                    // Streak Win/Loss = Squared with thick accent bar, darker/rich shades (emerald-950 & 500 / rose-950 & 500)
                     if (s.outcome === 'Win') {
                         if (isStreak) {
-                            trendHtml += `<div class="w-[14px] h-[14px] rounded-t-[2px] bg-emerald-950/80 border-x border-t border-emerald-500/50 border-b-[3px] border-b-emerald-400 text-emerald-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none">W</div>`;
+                            // Darker Forest Green Sequence Bar
+                            trendHtml += `<div class="w-[14px] h-[14px] rounded-t-[2px] bg-emerald-950 border-x border-t border-emerald-700/80 border-b-[3px] border-b-emerald-600 text-emerald-500 flex items-center justify-center text-[8px] font-black shadow-sm leading-none" title="Win Sequence">W</div>`;
                         } else {
-                            trendHtml += `<div class="w-[14px] h-[14px] rounded-full bg-emerald-950/80 border border-emerald-500/50 text-emerald-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none">W</div>`;
+                            // Lighter Mint Green Single Circle
+                            trendHtml += `<div class="w-[14px] h-[14px] rounded-full bg-emerald-800/40 border border-emerald-300 text-emerald-200 flex items-center justify-center text-[8px] font-black shadow-sm leading-none" title="Single Win">W</div>`;
                         }
                     } else if (s.outcome === 'Loss') {
                         if (isStreak) {
-                            trendHtml += `<div class="w-[14px] h-[14px] rounded-t-[2px] bg-rose-950/80 border-x border-t border-rose-500/50 border-b-[3px] border-b-rose-500 text-rose-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none">L</div>`;
+                            // Darker Crimson Red Sequence Bar
+                            trendHtml += `<div class="w-[14px] h-[14px] rounded-t-[2px] bg-rose-950 border-x border-t border-rose-800/90 border-b-[3px] border-b-rose-700 text-rose-500 flex items-center justify-center text-[8px] font-black shadow-sm leading-none" title="Loss Sequence">L</div>`;
                         } else {
-                            trendHtml += `<div class="w-[14px] h-[14px] rounded-full bg-rose-950/80 border border-rose-500/50 text-rose-400 flex items-center justify-center text-[8px] font-bold shadow-sm leading-none">L</div>`;
+                            // Lighter Coral Red Single Circle
+                            trendHtml += `<div class="w-[14px] h-[14px] rounded-full bg-rose-800/40 border border-rose-300 text-rose-200 flex items-center justify-center text-[8px] font-black shadow-sm leading-none" title="Single Loss">L</div>`;
                         }
                     }
                 }
-                
+
                 popupTrendContainer.innerHTML = trendHtml;
             }
         }
     }
-
     popup.classList.remove('opacity-0', 'translate-y-12', 'pointer-events-none');
 };
 
@@ -322,17 +344,16 @@ document.addEventListener('click', (e) => {
 const initColumns = () => {
     const table = document.getElementById('log_table');
     if(!table) return;
-    
+
     const savedPrefs = JSON.parse(localStorage.getItem('columnPrefs')) || {
         'spin': true, 'bet-on': true, 'stake': true, 'result': true, 'status': true, 'spin-pnl': true, 'bankroll': true
     };
-
     document.querySelectorAll('.col-toggle').forEach(chk => {
         const col = chk.value;
         chk.checked = savedPrefs[col] !== false;
         if (!chk.checked) table.classList.add('hide-col-' + col);
         else table.classList.remove('hide-col-' + col);
-        
+
         chk.addEventListener('change', (e) => {
             if(e.target.checked) {
                 table.classList.remove('hide-col-' + col);
@@ -348,17 +369,16 @@ const initColumns = () => {
 
 const updateUI = (state) => {
     currentState = state;
-
     let maxRunAlt = 0;
     if (state.history && state.history.length > 0) {
         let runWin = 0;
         let runLoss = 0;
         let runAlt = 0;
         let lastRealOutcome = null;
-        
+
         for (let i = state.history.length - 1; i >= 0; i--) {
             let s = state.history[i];
-            
+
             if (s.outcome === 'Win' || s.outcome === 'Loss') {
                 if (lastRealOutcome === null) {
                     runAlt = 1;
@@ -378,7 +398,7 @@ const updateUI = (state) => {
             s.runWin = runWin;
             s.runLoss = runLoss;
             s.runAlt = runAlt;
-            
+
             if (runAlt > maxRunAlt) maxRunAlt = runAlt;
         }
     }
@@ -403,10 +423,9 @@ const updateUI = (state) => {
     if (state.history && state.history.length > 0) {
         const oldestSpin = state.history[state.history.length - 1];
         startBankroll = oldestSpin.bankroll - oldestSpin.pnl;
-        
+
         maxBankroll = startBankroll;
         minBankroll = startBankroll;
-
         state.history.forEach(spin => {
             if (spin.bankroll > maxBankroll) maxBankroll = spin.bankroll;
             if (spin.bankroll < minBankroll) minBankroll = spin.bankroll;
@@ -416,7 +435,7 @@ const updateUI = (state) => {
     const startEl = document.getElementById('start_amount');
     const highEl = document.getElementById('highest_amount');
     const lowEl = document.getElementById('lowest_amount');
-    
+
     if (startEl) startEl.innerHTML = formatDisplay(startBankroll, 'small', true);
     if (highEl) highEl.innerHTML = formatDisplay(maxBankroll, 'small', true); 
     if (lowEl) lowEl.innerHTML = formatDisplay(minBankroll, 'small', true);
@@ -438,7 +457,7 @@ const updateUI = (state) => {
     document.getElementById('spin_count').innerText = state.spin_count;
     document.getElementById('total_wins').innerText = state.total_wins;
     document.getElementById('total_losses').innerText = state.total_losses;
-    
+
     document.getElementById('max_win_streak').innerText = state.max_win_streak;
     document.getElementById('max_loss_streak').innerText = state.max_loss_streak;
     const maxAltEl = document.getElementById('max_alt_streak');
@@ -453,7 +472,6 @@ const updateUI = (state) => {
     } else {
         document.getElementById('number_grid_container').classList.add('opacity-50', 'pointer-events-none', 'grayscale');
         if(alertContainer) alertContainer.classList.remove('hidden');
-
         if (state.status === "TARGET_REACHED") {
             alertBox.className = "flex flex-col space-y-2 rounded-xl p-2 border border-emerald-500 bg-emerald-950/30 text-emerald-400 mb-1 relative z-10";
             document.getElementById('status_icon').innerText = "🎯";
@@ -466,7 +484,7 @@ const updateUI = (state) => {
             document.getElementById('status_msg').innerText = "You have dropped to your stop loss limit.";
         }
     }
-    
+
     updatePopupHUD(state);
 
     const logBody = document.getElementById('log_body');
@@ -477,10 +495,10 @@ const updateUI = (state) => {
 
     let logRows = "";
     let tableHistory = state.history.slice(0, 30);
-    
+
     tableHistory.forEach(spin => {
         const pnlClass = spin.outcome === "Win" ? "text-emerald-400 font-semibold" : spin.outcome === "Loss" ? "text-rose-500" : "text-slate-400";
-        
+
         let targetCell = "";
         if (spin.bet_on === "Player") targetCell = `<span class="text-blue-500 font-bold text-xs">🔵 P</span>`;
         else if (spin.bet_on === "Banker") targetCell = `<span class="text-red-500 font-bold text-xs">🔴 B</span>`;
@@ -491,9 +509,9 @@ const updateUI = (state) => {
         else if (spin.bet_on === "High") targetCell = `<span class="text-amber-400 font-bold text-xs">🟡 HI</span>`;
         else if (spin.bet_on === "Low") targetCell = `<span class="text-sky-400 font-bold text-xs">🔵 LO</span>`;
         else if (spin.bet_on === "Wait") targetCell = `<span class="text-slate-400 font-bold text-xs">👀 W</span>`;
-            
+
         let spunColorClass = "text-emerald-400 bg-emerald-950/40 border-emerald-900/50"; 
-        
+
         if (spin.spun_trait === 'Player') {
             spunColorClass = "text-blue-400 bg-blue-950/40 border-blue-900/50";
         } else if (spin.spun_trait === 'Banker') {
@@ -520,10 +538,10 @@ const updateUI = (state) => {
         }
 
         const spunNumberCell = `<span class="font-black text-[10px] px-2 py-0.5 rounded border whitespace-nowrap ${spunColorClass}">${displayColorText}</span>`;
-        
+
         let outcomeBadge = "";
         let rowBgClass = "hover:bg-slate-900/40"; 
-        
+
         if (spin.outcome === "Win") {
             if (spin.runWin >= 5) {
                 rowBgClass = "bg-amber-900/10 hover:bg-amber-900/30";
@@ -556,7 +574,7 @@ const updateUI = (state) => {
                 <td class="py-1.5 px-2 col-bet-on">${targetCell}</td>
                 <td class="py-1.5 px-2 font-mono font-medium text-slate-200 text-[10px] sm:text-xs col-stake">${formatDisplay(spin.bet_amount, 'small', true)}</td>
                 <td class="py-1.5 px-2 text-center col-result">${spunNumberCell}</td>
-                <td class="py-1.5 px-2 text-center">${outcomeBadge}</td>
+                <td class="py-1.5 px-2 text-center col-status">${outcomeBadge}</td>
                 <td class="py-1.5 px-2 text-right font-mono ${pnlClass} text-[10px] sm:text-xs col-spin-pnl">${formatDisplay(spin.pnl, 'small', true)}</td>
                 <td class="py-1.5 px-2 text-right font-mono font-bold text-white text-[10px] sm:text-xs col-bankroll">${formatDisplay(spin.bankroll, 'small', true)}</td>
             </tr>
@@ -568,9 +586,9 @@ const updateUI = (state) => {
 const changeAppState = async () => {
     const newProg = document.getElementById('progression_selector').value;
     const newGame = document.getElementById('game_selector').value;
-    
+
     if (currentState && currentState.progression === newProg && currentState.game_type === newGame) return;
-    
+
     try {
         popupDismissed = false;
         const response = await fetch('/change_state', { 
@@ -578,7 +596,7 @@ const changeAppState = async () => {
             headers: { 'Content-Type': 'application/json' }, 
             body: JSON.stringify({ progression: newProg, game_type: newGame }) 
         });
-        
+
         if (!response.ok) {
             alert("SERVER ERROR: The server rejected the request. Please make sure you RESTARTED your Python app.");
             if(currentState) {
